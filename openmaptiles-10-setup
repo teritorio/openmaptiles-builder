@@ -1,0 +1,5 @@
+docker-compose build
+
+# OpenMapTiles
+
+git clone -b teritorio https://github.com/frodrigo/openmaptiles.git

@@ -1,0 +1,4 @@
+wget -P pbf \
+    http://download.geofabrik.de/europe/spain-latest.osm.pbf \
+    http://download.geofabrik.de/europe/andorra-latest.osm.pbf \
+    http://download.geofabrik.de/europe/france-latest.osm.pbf
