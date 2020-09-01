@@ -20,6 +20,7 @@ docker-compose run --rm build bash -e -c "
 
 mv pbf/merge.osm.pbf openmaptiles/data/
 
+cd openmaptiles
 docker-compose down -v && \
 docker-compose up -d postgres && sleep 10 && \
 docker-compose run --rm import-water && \
@@ -30,18 +31,18 @@ docker-compose run --rm import-osm && \
 docker-compose run --rm import-wikidata && \
 docker-compose run --rm import-sql && \
 docker-compose -f docker-compose.yml -f ./data/docker-compose-config.yml  run --rm generate-vectortiles
+cd ..
 
 
 mv openmaptiles/data/tiles.mbtiles mbtiles/openmaptiles-v3-france-z10-z14.mbtiles
-
 
 # 8m39,435s
 docker-compose run --rm build bash -e -c "
     cd /data/mbtiles
     tile-join --no-tile-size-limit \
-        --attribution '<a href="https://www.teritorio.fr/" target="_blank">&copy; Teritorio</a> <a href="https://www.openmaptiles.org/" target="_blank">&copy; OpenMapTiles</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>' \
-        --force -o teritorio-aqui-dev.mbtiles \
-        tiles-z0-z6.mbtiles \
+        --attribution '<a href=\"https://www.teritorio.fr/\" target=\"_blank\">&copy; Teritorio</a> <a href=\"https://www.openmaptiles.org/\" target=\"_blank\">&copy; OpenMapTiles</a> <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\">&copy; OpenStreetMap contributors</a>' \
+        --force -o teritorio-dev.mbtiles \
+        openmaptiles-v3-z0-z6.mbtiles \
         openmaptiles-v3-france-z7-z9.mbtiles \
         openmaptiles-v3-france-z10-z14.mbtiles
 "
