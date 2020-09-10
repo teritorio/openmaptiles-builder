@@ -30,11 +30,12 @@ docker-compose run --rm import-lakelines && \
 docker-compose run --rm import-osm && \
 docker-compose run --rm import-wikidata && \
 docker-compose run --rm import-sql && \
-docker-compose -f docker-compose.yml -f ./data/docker-compose-config.yml  run --rm generate-vectortiles
+docker-compose -f docker-compose.yml -f ../docker-compose-config-france-z7-z9.yml run --rm generate-vectortiles && \
+mv data/tiles.mbtiles ../mbtiles/openmaptiles-v3-france-z7-z9.mbtiles && \
+docker-compose -f docker-compose.yml -f ../docker-compose-config-france-z10-z14.yml run --rm generate-vectortiles && \
+mv data/tiles.mbtiles ../mbtiles/openmaptiles-v3-france-z10-z14.mbtiles
 cd ..
 
-
-mv openmaptiles/data/tiles.mbtiles mbtiles/openmaptiles-v3-france-z10-z14.mbtiles
 
 # 8m39,435s
 docker-compose run --rm build bash -e -c "

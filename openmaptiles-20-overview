@@ -1,19 +1,23 @@
+#!/usr/bin/bash
+
+set -e
+
 # Planet z0-z6
 
-wget -P pbf https://planet.openstreetmap.org/pbf/planet-latest.osm.pbf -
+wget -P pbf https://planet.openstreetmap.org/pbf/planet-latest.osm.pbf
 
 docker-compose run --rm build bash -e -c "
     cd /data/pbf
 
-    time osmium tags-filter planet-latest.osm.pbf w/highway=motorway,trunk --overwrite -o /root/highway-latest.osm.pbf
-    time osmium tags-filter planet-latest.osm.pbf w/railway=rail --overwrite -o /root/rails-latest.osm.pbf
-    time osmium tags-filter planet-latest.osm.pbf n/place=city,continent,country,island,ocean,sea,state --overwrite -o /root/places-latest.osm.pbf
+    time osmium tags-filter planet-latest.osm.pbf w/highway=motorway,trunk --overwrite -o planet-highway-latest.osm.pbf
+    time osmium tags-filter planet-latest.osm.pbf w/railway=rail --overwrite -o planet-rails-latest.osm.pbf
+    time osmium tags-filter planet-latest.osm.pbf n/place=city,continent,country,island,ocean,sea,state --overwrite -o planet-places-latest.osm.pbf
 
-    time osmium tags-filter planet-latest.osm.pbf a/natural=water -R -f pbf | osmium tags-filter -F pbf - a/water=lake -R -f pbf | osmium tags-filter -F pbf - a/name=* -R --overwrite -o /root/lake_noref-latest.osm.pbf
-    time osmium getid planet-latest.osm.pbf -r -I /root/lake_noref-latest.osm.pbf --overwrite -o /root/lake-latest.osm.pbf
+    time osmium tags-filter planet-latest.osm.pbf a/natural=water -R -f pbf | osmium tags-filter -F pbf - a/water=lake -R -f pbf | osmium tags-filter -F pbf - a/name=* -R --overwrite -o planet-lake_noref-latest.osm.pbf
+    time osmium getid planet-latest.osm.pbf -r -I planet-lake_noref-latest.osm.pbf --overwrite -o planet-lake-latest.osm.pbf
 
-    time osmium tags-filter planet-latest.osm.pbf a/leisure=nature_reserve a/boundary=national_park -R --overwrite -o /root/park_noref-latest.osm.pbf
-    time osmium getid planet-latest.osm.pbf -r -I /root/park_noref-latest.osm.pbf --overwrite -o /root/park-latest.osm.pbf
+    time osmium tags-filter planet-latest.osm.pbf a/leisure=nature_reserve a/boundary=national_park -R --overwrite -o planet-park_noref-latest.osm.pbf
+    time osmium getid planet-latest.osm.pbf -r -I planet-park_noref-latest.osm.pbf --overwrite -o planet-park-latest.osm.pbf
 
     time osmium merge -v --progress \
         --overwrite -o planet-z0-z6.osm.pbf \
@@ -24,39 +28,23 @@ docker-compose run --rm build bash -e -c "
         planet-park-latest.osm.pbf
 "
 
+rm pbf/planet-highway-latest.osm.pbf pbf/planet-rails-latest.osm.pbf pbf/planet-places-latest.osm.pbf pbf/planet-lake-latest.osm.pbf pbf/planet-park-latest.osm.pbf pbf/planet-lake_noref-latest.osm.pbf pbf/planet-park_noref-latest.osm.pbf
 
 
-# Disputed border
+rm openmaptiles/data/*.pbf
+cp pbf/planet-z0-z6.osm.pbf openmaptiles/data/
 
-git clone -b disputed_claim https://github.com/frodrigo/osmborder.git
-cd osmborder
-mkdir build && cd build && cmake .. && make
-./osmborder_filter /data/planet-latest.osm.pbf -o border-filtered.osm.pbf
+cd openmaptiles
+docker-compose down -v && \
+docker-compose up -d postgres && sleep 10 && \
+docker-compose run --rm import-water && \
+docker-compose run --rm import-osmborder && \
+docker-compose run --rm import-natural-earth && \
+docker-compose run --rm import-lakelines && \
+docker-compose run --rm import-osm && \
+docker-compose run --rm import-wikidata && \
+docker-compose run --rm import-sql && \
+docker-compose -f docker-compose.yml -f ../docker-compose-config-z0-z6.yml run --rm generate-vectortiles
+cd ..
 
-time ./osmborder_filter /data/planet-latest.osm.pbf -o border-filtered.osm.pbf
-time ./osmborder border-filtered.osm.pbf --overwrite --output-file=osmborder_lines.csv
-
-
-git clone -b disputed_claim https://github.com/frodrigo/import-osmborder.git
-cd import
-docker build -t openmaptiles/import-osmborder:0.4-disputed_claim .
-
-
-# ~12h
-rm -fr build/* && \
-cd layers/poi && bash ./update.sh && cd - && \
-make && \
-
-
-# Merge mbtiles
-
-# Install tippecanoe, by a way or an other
-git clone https://github.com/mapbox/tippecanoe.git
-cd tippecanoe && make
-
-#~/tippecanoe/tile-join --no-tile-size-limit --force -o tiles-z7-z14.mbtiles -Z 7 -z 14 tiles-france.mbtiles
-#~/tippecanoe/tile-join --no-tile-size-limit --force -o tiles-merge.mbtiles tiles-z0-z6.mbtiles tiles-z7-z14.mbtiles
-#~/tippecanoe/tile-join --no-tile-size-limit --force -o openmaptiles-v3-france_2.mbtiles tiles-z0-z6.mbtiles openmaptiles-v3-france-z7-z9.mbtiles openmaptiles-v3-france-z10-z14.mbtiles
-
-
-#~/tippecanoe/tile-join --no-tile-size-limit --force -o tiles-z7-z14.mbtiles -Z 7 -z 14 tiles.mbtiles
+mv openmaptiles/data/tiles.mbtiles mbtiles/openmaptiles-v3-z0-z6.mbtiles
