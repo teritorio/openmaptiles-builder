@@ -4,9 +4,9 @@ set -e
 
 docker-compose run --rm build bash -e -c "
     cd /data/pbf
-    /usr/lib/python3-pyosmium/pyosmium-up-to-date andorra-latest.osm.pbf
-    /usr/lib/python3-pyosmium/pyosmium-up-to-date spain-latest.osm.pbf
-    /usr/lib/python3-pyosmium/pyosmium-up-to-date france-latest.osm.pbf
+    /usr/lib/python3-pyosmium/pyosmium-up-to-date -v andorra-latest.osm.pbf
+    /usr/lib/python3-pyosmium/pyosmium-up-to-date -v spain-latest.osm.pbf
+    /usr/lib/python3-pyosmium/pyosmium-up-to-date -v france-latest.osm.pbf
 "
 
 docker-compose run --rm build bash -e -c "
@@ -21,6 +21,9 @@ docker-compose run --rm build bash -e -c "
 mv pbf/merge.osm.pbf openmaptiles/data/
 
 cd openmaptiles
+rm -fr build && \
+cd layers/poi && bash ./update.sh && cd - && \
+make && \
 docker-compose down -v && \
 docker-compose up -d postgres && sleep 10 && \
 docker-compose run --rm import-water && \
