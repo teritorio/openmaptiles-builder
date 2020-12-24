@@ -22,7 +22,7 @@ mv pbf/merge.osm.pbf openmaptiles/data/
 
 cd openmaptiles
 rm -fr build && \
-cd layers/poi && bash ./update.sh && cd - && \
+cd layers/poi_tourism && bash ./update.sh && cd - && \
 make && \
 docker-compose down -v && \
 docker-compose up -d postgres && sleep 10 && \
