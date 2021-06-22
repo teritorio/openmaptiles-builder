@@ -56,3 +56,5 @@ docker-compose run --rm build bash -e -c "
         openmaptiles-v3-france-z7-z9.mbtiles \
         openmaptiles-v3-france-z10-z14.mbtiles
 "
+
+cp openmaptiles/layers/poi_tourism/ontology.json ./mbtiles/teritorio-ontology-dev.json
