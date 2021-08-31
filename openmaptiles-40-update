@@ -18,11 +18,12 @@ docker-compose run --rm build bash -e -c "
         andorra-latest.osm.pbf
 "
 
-mv pbf/merge.osm.pbf openmaptiles/data/
+mkdir -p openmaptiles/data/
+mv -f pbf/merge.osm.pbf openmaptiles/data/
 
 cd openmaptiles
 rm -fr build && \
-cd layers/poi_tourism && bash ./update.sh && cd - && \
+cd layers/poi_tourism && bash ../../../openmaptiles-layers-poi_tourism-update.sh && cd - && \
 make && \
 docker-compose down -v && \
 make start-db && \
