@@ -29,7 +29,7 @@ cd -
 docker-compose run --rm build bash -e -c "
     ./ontology-build.sh && \
     ruby ontology2layer.rb \
-        ontology.json \
+        ontology-tourism.json \
         openmaptiles/layers/poi_tourism/poi_tourism.yaml \
         openmaptiles/layers/poi_tourism/mapping.yaml class.sql
 "
@@ -68,4 +68,4 @@ docker-compose run --rm build bash -e -c "
         openmaptiles-v3-france-z10-z14.mbtiles
 "
 
-cp ontology.json ./mbtiles/teritorio-ontology-dev.json
+cp ontology-tourism.json ./mbtiles/teritorio-tourism-ontology-dev.json
