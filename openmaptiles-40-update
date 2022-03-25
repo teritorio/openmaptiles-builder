@@ -39,10 +39,8 @@ make && \
 make start-db && \
 make import-data && \
 make import-osm area=merge && \
-rm -fr data/borders && \
-make import-borders area=merge && \
-make import-wikidata && \
 make import-sql && \
+make import-wikidata && \
 make analyze-db && \
 cp ../france-z7-z9.bbox data/merge.bbox && \
 sed -i 's/MIN_ZOOM.*/MIN_ZOOM=7/' .env && \
