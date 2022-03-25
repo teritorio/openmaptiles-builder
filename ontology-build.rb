@@ -5,7 +5,15 @@ Encoding.default_external = Encoding::UTF_8
 Encoding.default_internal = Encoding::UTF_8
 
 input_csv = ARGV[0]
-ontology_json = ARGV[1]
+tags_csv = ARGV[1]
+ontology_json = ARGV[2]
+
+plus_tags = CSV.new(File.new(tags_csv).read, headers: true).collect{ |row|
+  row['tag'].gsub(' ', '').gsub(' ', '')
+}.select{ |tag|
+  tag != ''
+}.uniq
+
 
 superclass_name_fr = class_name_fr = subclass_name_fr = nil
 csv = CSV.new(File.new(input_csv).read, headers: true).collect{ |row|
@@ -30,7 +38,9 @@ csv = CSV.new(File.new(input_csv).read, headers: true).collect{ |row|
 }.select{ |row|
   row['superclass']
 }.map{ |row|
-  row['extra_tags'] = row['extra_tags'].split(',').map{ |kv| kv.split('=').map(&:strip) } if row['extra_tags']
+  row['extra_tags'] = Hash[row['extra_tags'].split(',').map{ |kv|
+    kv.split('=').map(&:strip)
+  }] if row['extra_tags']
   row
 }
 
@@ -60,6 +70,7 @@ hierarchy = Hash[csv.group_by{ |row| row['superclass'] }.collect{ |superclass, c
         zoom: rr['zoom'].to_i,
         style: rr['style'],
         priority: rr['priority'].to_i,
+        osm_tags: [{ rr['key'] => rr['value'] }.merge(rr['extra_tags'] || {})]
       }]
     }]
     if sc
@@ -84,4 +95,8 @@ hierarchy = Hash[csv.group_by{ |row| row['superclass'] }.collect{ |superclass, c
   }]
 }]
 file = File.open(ontology_json, 'w')
-file.write(JSON.pretty_generate({ superclass: hierarchy }))
+file.write(JSON.pretty_generate({
+  name: 'Ontology Tourism',
+  superclass: hierarchy,
+  osm_tags_extra: plus_tags,
+}))

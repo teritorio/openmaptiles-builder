@@ -22,10 +22,20 @@ mkdir -p openmaptiles/data/
 mv -f pbf/merge.osm.pbf openmaptiles/data/
 
 cd openmaptiles
-rm -fr build && \
-cd layers/poi_tourism && bash ../../../openmaptiles-layers-poi_tourism-update.sh && cd - && \
-make && \
 docker-compose down -v && \
+rm -fr build
+cd -
+
+docker-compose run --rm build bash -e -c "
+    ./ontology-build.sh && \
+    ruby ontology2layer.rb \
+        ontology.json \
+        openmaptiles/layers/poi_tourism/poi_tourism.yaml \
+        openmaptiles/layers/poi_tourism/mapping.yaml class.sql
+"
+
+cd openmaptiles && \
+make && \
 make start-db && \
 make import-data && \
 make import-osm area=merge && \
@@ -58,4 +68,4 @@ docker-compose run --rm build bash -e -c "
         openmaptiles-v3-france-z10-z14.mbtiles
 "
 
-cp openmaptiles/layers/poi_tourism/ontology.json ./mbtiles/teritorio-ontology-dev.json
+cp ontology.json ./mbtiles/teritorio-ontology-dev.json

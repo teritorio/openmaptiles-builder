@@ -20,4 +20,9 @@ COPY --from=builder /tmp/tippecanoe/tile-join /usr/bin/tile-join
 RUN apt update && apt install -y \
     wget \
     python3-pyosmium \
-    osmium-tool
+    osmium-tool \
+    ruby \
+    curl
+
+WORKDIR /data
+VOLUME /data
