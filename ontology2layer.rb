@@ -2,10 +2,11 @@ require 'csv'
 require 'yaml'
 require 'json'
 
-ontology_json = ARGV[0]
-layer_yaml = ARGV[1]
-mapping_yaml = ARGV[2]
-class_sql = ARGV[3]
+name = ARGV[0]
+ontology_json = ARGV[1]
+layer_yaml = ARGV[2]
+mapping_yaml = ARGV[3]
+class_sql = ARGV[4]
 ontology = JSON.parse(File.new(ontology_json).read)
 
 osm_tags_extra = ontology['osm_tags_extra']
@@ -30,7 +31,7 @@ include_tags = "'#{include_tags}'" if include_tags.size > 0
 poi_yaml = File.open(layer_yaml).read
 poi_yaml = YAML::load(poi_yaml)
 
-query = '(SELECT osm_id, geometry, name, name_en, name_de, {name_languages}, superclass, class, subclass, zoom, priority, style, agg_stop, layer, level, indoor, rank, {extra_attributes} FROM layer_poi_tourism(!bbox!, z(!scale_denominator!), !pixel_width!)) AS t'
+query = "(SELECT osm_id, geometry, name, name_en, name_de, {name_languages}, superclass, class, subclass, zoom, priority, style, agg_stop, layer, level, indoor, rank, {extra_attributes} FROM layer_poi_#{name}(!bbox!, z(!scale_denominator!), !pixel_width!)) AS t"
 query = query.gsub('{extra_attributes}', osm_tags_extra.map{ |t| "tags->'#{t}' AS \"#{t}\"" }.join(', '))
 poi_yaml['layer']['datasource']['query'] = query
 
@@ -181,7 +182,7 @@ FROM (
 
 file = File.open(class_sql, 'w')
 file.write("""
-CREATE OR REPLACE FUNCTION poi_tourismclasss(key TEXT, value TEXT, tags hstore) RETURNS TABLE (
+CREATE OR REPLACE FUNCTION poi_#{name}_class(key TEXT, value TEXT, tags hstore) RETURNS TABLE (
     superclass TEXT,
     class TEXT,
     subclass TEXT,

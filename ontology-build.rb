@@ -4,9 +4,10 @@ require 'json'
 Encoding.default_external = Encoding::UTF_8
 Encoding.default_internal = Encoding::UTF_8
 
-input_csv = ARGV[0]
-tags_csv = ARGV[1]
-ontology_json = ARGV[2]
+name = ARGV[0]
+input_csv = ARGV[1]
+tags_csv = ARGV[2]
+ontology_json = ARGV[3]
 
 plus_tags = CSV.new(File.new(tags_csv).read, headers: true).collect{ |row|
   row['tag'].gsub(' ', '').gsub(' ', '')
@@ -96,7 +97,7 @@ hierarchy = Hash[csv.group_by{ |row| row['superclass'] }.collect{ |superclass, c
 }]
 file = File.open(ontology_json, 'w')
 file.write(JSON.pretty_generate({
-  name: 'Ontology Tourism',
+  name: name,
   superclass: hierarchy,
   osm_tags_extra: plus_tags,
 }))
