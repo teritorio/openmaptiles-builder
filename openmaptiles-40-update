@@ -4,9 +4,10 @@ set -e
 
 docker-compose run --rm build bash -e -c "
     cd /data/pbf
-    /usr/lib/python3-pyosmium/pyosmium-up-to-date -v andorra-latest.osm.pbf
-    /usr/lib/python3-pyosmium/pyosmium-up-to-date -v spain-latest.osm.pbf
     /usr/lib/python3-pyosmium/pyosmium-up-to-date -v france-latest.osm.pbf
+    /usr/lib/python3-pyosmium/pyosmium-up-to-date -v andorra-latest.osm.pbf
+    /usr/lib/python3-pyosmium/pyosmium-up-to-date -v guernsey-jersey-latest.osm.pbf
+    /usr/lib/python3-pyosmium/pyosmium-up-to-date -v spain-latest.osm.pbf
 "
 
 docker-compose run --rm build bash -e -c "
@@ -14,8 +15,9 @@ docker-compose run --rm build bash -e -c "
     osmium merge -v --progress \
         --overwrite -o merge.osm.pbf \
         france-latest.osm.pbf \
-        spain-latest.osm.pbf \
         andorra-latest.osm.pbf
+        guernsey-jersey-latest.osm.pbf
+        spain-latest.osm.pbf \
 "
 
 mkdir -p openmaptiles/data/

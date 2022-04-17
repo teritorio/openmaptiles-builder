@@ -1,4 +1,20 @@
 wget -P pbf \
     http://download.geofabrik.de/europe/spain-latest.osm.pbf \
     http://download.geofabrik.de/europe/andorra-latest.osm.pbf \
+    http://download.geofabrik.de/europe/guernsey-jersey-latest.osm.pbf \
     http://download.geofabrik.de/europe/france-latest.osm.pbf
+
+cd pbf
+
+
+osmium cat -O -o france-latest_.osm.pbf --output-header=osmosis_replication_base_url=http://download.geofabrik.de/europe/france-updates/ france-latest.osm.pbf
+mv france-latest_.osm.pbf france-latest.osm.pbf
+
+osmium cat -O -o andorra-latest_.osm.pbf --output-header=osmosis_replication_base_url=http://download.geofabrik.de/europe/andorra-updates/ andorra-latest.osm.pbf
+mv andorra-latest_.osm.pbf andorra-latest.osm.pbf
+
+osmium cat -O -o guernsey-jersey-latest_.osm.pbf --output-header=osmosis_replication_base_url=http://download.geofabrik.de/europe/guernsey-jersey-updates/ guernsey-jersey-latest.osm.pbf
+mv guernsey-jersey-latest_.osm.pbf guernsey-jersey-latest.osm.pbf
+
+osmium cat -O -o spain-latest_.osm.pbf --output-header=osmosis_replication_base_url=http://download.geofabrik.de/europe/spain-updates/ spain-latest.osm.pbf
+mv spain-latest_.osm.pbf spain-latest.osm.pbf
