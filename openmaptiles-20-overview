@@ -13,6 +13,9 @@ docker-compose run --rm build bash -e -c "
     time osmium tags-filter planet-latest.osm.pbf w/railway=rail --overwrite -o planet-rails-latest.osm.pbf
     time osmium tags-filter planet-latest.osm.pbf n/place=city,continent,country,island,ocean,sea,state --overwrite -o planet-places-latest.osm.pbf
 
+    time osmium tags-filter planet-latest.osm.pbf a/boundary=administrative -R -f pbf | osmium tags-filter -F pbf - a/admin_level=1,2,3,4 -R --overwrite -o planet-boundary_noref-latest.osm.pbf
+    time osmium getid planet-latest.osm.pbf -r -I planet-boundary_noref-latest.osm.pbf --overwrite -o planet-boundary-latest.osm.pbf
+
     time osmium tags-filter planet-latest.osm.pbf a/natural=water -R -f pbf | osmium tags-filter -F pbf - a/water=lake -R -f pbf | osmium tags-filter -F pbf - a/name=* -R --overwrite -o planet-lake_noref-latest.osm.pbf
     time osmium getid planet-latest.osm.pbf -r -I planet-lake_noref-latest.osm.pbf --overwrite -o planet-lake-latest.osm.pbf
 
@@ -24,12 +27,21 @@ docker-compose run --rm build bash -e -c "
         planet-highway-latest.osm.pbf \
         planet-rails-latest.osm.pbf \
         planet-places-latest.osm.pbf \
+        planet-boundary-latest.osm.pbf \
         planet-lake-latest.osm.pbf \
         planet-park-latest.osm.pbf
 "
 
-rm -f pbf/planet-highway-latest.osm.pbf pbf/planet-rails-latest.osm.pbf pbf/planet-places-latest.osm.pbf pbf/planet-lake-latest.osm.pbf pbf/planet-park-latest.osm.pbf pbf/planet-lake_noref-latest.osm.pbf pbf/planet-park_noref-latest.osm.pbf
-
+rm -f \
+    pbf/planet-highway-latest.osm.pbf \
+    pbf/planet-rails-latest.osm.pbf \
+    pbf/planet-places-latest.osm.pbf \
+    pbf/planet-boundary-latest.osm.pbf \
+    pbf/planet-boundary_noref-latest.osm.pbf \
+    pbf/planet-lake-latest.osm.pbf \
+    pbf/planet-park-latest.osm.pbf \
+    pbf/planet-lake_noref-latest.osm.pbf \
+    pbf/planet-park_noref-latest.osm.pbf
 
 rm -f openmaptiles/data/*.pbf
 cp pbf/planet-z0-z6.osm.pbf openmaptiles/data/
@@ -38,8 +50,7 @@ cd openmaptiles
 
 time bash -c "\
 docker-compose down -v && \
-docker-compose run --rm openmaptiles-tools bash -c 'chmod a+w /cache/' && \
-rm -fr build && \
+docker-compose run --rm openmaptiles-tools bash -c 'chmod a+w /cache/ && rm -fr build' && \
 make && \
 make import-data && \
 make import-osm area=planet-z0-z6 && \
@@ -47,7 +58,9 @@ make import-sql && \
 make import-wikidata && \
 make analyze-db
 "
-docker-compose -f docker-compose.yml -f ../docker-compose-config-z0-z6.yml run --rm generate-vectortiles
+sed -i 's/MIN_ZOOM.*/MIN_ZOOM=0/' .env && \
+sed -i 's/MAX_ZOOM.*/MAX_ZOOM=6/' .env && \
+make generate-tiles area=planet-z0-z6
 cd ..
 
-mv openmaptiles/data/tiles.mbtiles mbtiles/openmaptiles-v3-z0-z6.mbtiles
+mv -f openmaptiles/data/tiles.mbtiles mbtiles/openmaptiles-v3-z0-z6.mbtiles
