@@ -39,9 +39,11 @@ csv = CSV.new(File.new(input_csv).read, headers: true).collect{ |row|
 }.select{ |row|
   row['superclass']
 }.map{ |row|
-  row['extra_tags'] = Hash[row['extra_tags'].split(',').map{ |kv|
-    kv.split('=').map(&:strip)
-  }] if row['extra_tags']
+  if row['extra_tags']
+    row['extra_tags'] = row['extra_tags'].split(',').map{ |kv|
+      kv.split('=').map(&:strip)
+    }.to_h
+  end
   row
 }
 
@@ -59,13 +61,13 @@ if !error.empty?
 end
 
 
-hierarchy = Hash[csv.group_by{ |row| row['superclass'] }.collect{ |superclass, c|
+hierarchy = csv.group_by{ |row| row['superclass'] }.collect{ |superclass, c|
   c0 = c[0]
-  c = Hash[c.collect{ |r|
+  c = c.collect{ |r|
     r.slice('class:name:fr', 'class', 'subclass:name:fr', 'zoom', 'style', 'priority', 'key', 'value', 'extra_tags')
   }.group_by{ |r| r['class'] }.collect{ |classs, sc|
     sc0 = sc[0]
-    sc = Hash[sc.collect{ |rr|
+    sc = sc.collect{ |rr|
       [rr['value'], {
         label: { en: rr['value'], fr: rr['subclass:name:fr'] },
         zoom: rr['zoom'].to_i,
@@ -73,7 +75,7 @@ hierarchy = Hash[csv.group_by{ |row| row['superclass'] }.collect{ |superclass, c
         priority: rr['priority'].to_i,
         osm_tags: [{ rr['key'] => rr['value'] }.merge(rr['extra_tags'] || {})]
       }]
-    }]
+    }.to_h
     if sc
       [classs, {
         label: { en: classs, fr: sc0['class:name:fr'] },
@@ -87,14 +89,14 @@ hierarchy = Hash[csv.group_by{ |row| row['superclass'] }.collect{ |superclass, c
         priority: sc0['priority'].to_i,
       }]
     end
-  }]
+  }.to_h
   pop = c.delete(nil)
   pop = pop[:subclass] if pop
   [superclass, {
     label: { en: superclass, fr: c0['superclass:name:fr'] },
     class: c.merge(pop || {}),
   }]
-}]
+}.to_h
 file = File.open(ontology_json, 'w')
 file.write(JSON.pretty_generate({
   name: name,

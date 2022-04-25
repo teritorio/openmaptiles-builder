@@ -17,30 +17,30 @@ osm_tags = ontology['superclass'].values.collect{ |superclass|
       subclass['osm_tags']
     } + [classs['osm_tags'] || []]
   } + [[superclass['osm_tags'] || []]]
-}.flatten.compact.collect(&:to_a).flatten(1).uniq.select{ |k, _| k[-1] != '!' }.group_by{ |k, _| k }.transform_values{ |values| values.collect{ |_, v| v }.sort - ['*'] }.select{ |k, v| v.size > 0 }
+}.flatten.compact.collect(&:to_a).flatten(1).uniq.select{ |k, _| k[-1] != '!' }.group_by{ |k, _| k }.transform_values{ |values| values.collect{ |_, v| v }.sort - ['*'] }.select{ |_k, v| v.size > 0 }
 
 osm_tags['leisure'] = ['__any__']
 osm_tags['landuse'] = ['__any__']
 
-y = { 'def_poi': Hash[osm_tags] }
+y = { def_poi: osm_tags.to_h }
 yaml_str = YAML.dump(y)
 
 include_tags = (osm_tags.keys + osm_tags_extra).sort.uniq.join("', '")
 include_tags = "'#{include_tags}'" if include_tags.size > 0
 
-poi_yaml = File.open(layer_yaml).read
-poi_yaml = YAML::load(poi_yaml)
+poi_yaml = File.read(layer_yaml)
+poi_yaml = YAML.load(poi_yaml)
 
 query = "(SELECT osm_id, geometry, name, name_en, name_de, {name_languages}, superclass, class, subclass, zoom, priority, style, agg_stop, layer, level, indoor, rank, {extra_attributes} FROM layer_poi_#{name}(!bbox!, z(!scale_denominator!), !pixel_width!)) AS t"
 query = query.gsub('{extra_attributes}', osm_tags_extra.map{ |t| "tags->'#{t}' AS \"#{t}\"" }.join(', '))
 poi_yaml['layer']['datasource']['query'] = query
 
 keep_fields = %w[geometry name name_en name_de superclass class subclass zoom priority style agg_stop layer level indoor rank]
-poi_yaml['layer']['fields'] = poi_yaml['layer']['fields'].slice(*keep_fields).merge(Hash[osm_tags_extra.map{ |t| [t, nil] }])
-File.open(layer_yaml, 'w').write(YAML::dump(poi_yaml))
+poi_yaml['layer']['fields'] = poi_yaml['layer']['fields'].slice(*keep_fields).merge(osm_tags_extra.map{ |t| [t, nil] }.to_h)
+File.write(layer_yaml, YAML.dump(poi_yaml))
 
 file = File.open(mapping_yaml, 'w')
-file.write("""
+file.write("
 tags:
   include: [#{include_tags}]
 #{yaml_str.gsub('def_poi:', 'def_poi: &poi_mapping').gsub('---', '')}
@@ -114,7 +114,7 @@ tables:
     filters:
       reject:
         access: ['no']
-""")
+")
 
 
 whens = ontology['superclass'].collect{ |k_super, superclass|
@@ -143,12 +143,10 @@ whens = ontology['superclass'].collect{ |k_super, superclass|
         else
           "(NOT tags?'#{k}' OR tags->'#{k}' NOT IN (#{values.join(', ')}))"
         end
+      elsif values.size == 1
+        "tags?'#{k}' AND tags->'#{k}' = #{values[0]}"
       else
-        if values.size == 1
-          "tags?'#{k}' AND tags->'#{k}' = #{values[0]}"
-        else
-          "tags?'#{k}' AND tags->'#{k}' IN (#{values.join(', ')})"
-        end
+        "tags?'#{k}' AND tags->'#{k}' IN (#{values.join(', ')})"
       end
     end
   }.join(' AND ')
@@ -181,7 +179,7 @@ FROM (
 }.join(" UNION ALL\n")
 
 file = File.open(class_sql, 'w')
-file.write("""
+file.write("
 CREATE OR REPLACE FUNCTION poi_#{name}_class(key TEXT, value TEXT, tags hstore) RETURNS TABLE (
     superclass TEXT,
     class TEXT,
@@ -200,4 +198,4 @@ CREATE OR REPLACE FUNCTION poi_#{name}_class(key TEXT, value TEXT, tags hstore) 
 $$
 LANGUAGE SQL
 IMMUTABLE PARALLEL SAFE;
-""")
+")
