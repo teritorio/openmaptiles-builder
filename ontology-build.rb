@@ -4,10 +4,11 @@ require 'json'
 Encoding.default_external = Encoding::UTF_8
 Encoding.default_internal = Encoding::UTF_8
 
-name = ARGV[0]
-input_csv = ARGV[1]
-tags_csv = ARGV[2]
-ontology_json = ARGV[3]
+theme = ARGV[0]
+name = ARGV[1]
+input_csv = ARGV[2]
+tags_csv = ARGV[3]
+ontology_json = ARGV[4]
 
 plus_tags = CSV.new(File.new(tags_csv).read, headers: true).collect{ |row|
   row['tag'].gsub(' ', '').gsub(' ', '')
@@ -16,28 +17,12 @@ plus_tags = CSV.new(File.new(tags_csv).read, headers: true).collect{ |row|
 }.uniq
 
 
-superclass_name_fr = class_name_fr = subclass_name_fr = nil
 csv = CSV.new(File.new(input_csv).read, headers: true).collect{ |row|
-  row.to_h.transform_values{ |v| v == '' ? nil : v }
+  row.to_h.transform_values{ |v| v.strip == '' ? nil : v.strip }
 }.collect{ |row|
-  row.to_h.slice('superclass:name:fr', 'superclass', 'class:name:fr', 'class', 'subclass:name:fr', 'zoom', 'style', 'priority', 'key', 'value', 'extra_tags')
-}.collect{ |row|
-  if row['superclass:name:fr']
-    superclass_name_fr = row['superclass:name:fr']
-    class_name_fr = subclass_name_fr = nil
-  end
-  if row['class:name:fr']
-    class_name_fr = row['class:name:fr']
-    subclass_name_fr = class_name_fr
-  end
-
-  subclass_name_fr = row['subclass:name:fr'] if row['subclass:name:fr']
-  row['superclass:name:fr'] = superclass_name_fr
-  row['class:name:fr'] = class_name_fr
-  row['subclass:name:fr'] = subclass_name_fr
-  row
+  row.slice(*(['superclass:name:fr', 'superclass', 'class:name:fr', 'class', 'zoom', 'style', 'priority'].map{ |k| "#{theme}_#{k}" } + ['key', 'value', 'extra_tags', 'name:fr']))
 }.select{ |row|
-  row['superclass']
+  row["#{theme}_superclass"]
 }.map{ |row|
   if row['extra_tags']
     row['extra_tags'] = row['extra_tags'].split(',').map{ |kv|
@@ -49,51 +34,52 @@ csv = CSV.new(File.new(input_csv).read, headers: true).collect{ |row|
 
 
 error = csv.select{ |row|
-  row.slice('priority', 'superclass', 'key', 'value').any?{ |k, v|
+  row.slice("#{theme}_priority", "#{theme}_superclass", 'key', 'value').any?{ |k, v|
     k.nil? || v.nil? || k.include?(' ') || v.include?(' ')
   } or ![nil, '', '⬤', '◯', '•'].include?(row['style'])
 }
 
 if !error.empty?
-  puts 'ERROR'
+  puts 'ERROR: invalid row'
   error.each{ |row| puts row.inspect }
   exit 1
 end
 
 
-hierarchy = csv.group_by{ |row| row['superclass'] }.collect{ |superclass, c|
+
+hierarchy = csv.group_by{ |row| row["#{theme}_superclass"] }.collect{ |superclass, c|
   c0 = c[0]
   c = c.collect{ |r|
-    r.slice('class:name:fr', 'class', 'subclass:name:fr', 'zoom', 'style', 'priority', 'key', 'value', 'extra_tags')
-  }.group_by{ |r| r['class'] }.collect{ |classs, sc|
+    r.slice(*(['class:name:fr', 'class', 'zoom', 'style', 'priority'].map{ |k| "#{theme}_#{k}" } + ['key', 'value', 'extra_tags', 'name:fr']))
+  }.group_by{ |r| r["#{theme}_class"] }.collect{ |classs, sc|
     sc0 = sc[0]
     sc = sc.collect{ |rr|
       [rr['value'], {
-        label: { en: rr['value'], fr: rr['subclass:name:fr'] },
-        zoom: rr['zoom'].to_i,
-        style: rr['style'],
-        priority: rr['priority'].to_i,
+        label: { en: rr['value'], fr: rr['name:fr'] },
+        zoom: rr["#{theme}_zoom"].to_i,
+        style: rr["#{theme}_style"],
+        priority: rr["#{theme}_priority"].to_i,
         osm_tags: [{ rr['key'] => rr['value'] }.merge(rr['extra_tags'] || {})]
       }]
     }.to_h
     if sc
       [classs, {
-        label: { en: classs, fr: sc0['class:name:fr'] },
+        label: { en: classs, fr: sc0["#{theme}_class:name:fr"] },
         subclass: sc,
       }]
     else
       [classs, {
-        label: { en: classs, fr: sc0['class:name:fr'] },
-        zoom: sc0['zoom'].to_i,
-        style: sc0['style'],
-        priority: sc0['priority'].to_i,
+        label: { en: classs, fr: sc0["#{theme}_class:name:fr"] },
+        zoom: sc0["#{theme}_zoom"].to_i,
+        style: sc0["#{theme}_style"],
+        priority: sc0["#{theme}_priority"].to_i,
       }]
     end
   }.to_h
   pop = c.delete(nil)
   pop = pop[:subclass] if pop
   [superclass, {
-    label: { en: superclass, fr: c0['superclass:name:fr'] },
+    label: { en: superclass, fr: c0["#{theme}_superclass:name:fr"] },
     class: c.merge(pop || {}),
   }]
 }.to_h
