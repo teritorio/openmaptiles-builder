@@ -24,19 +24,25 @@ csv = CSV.new(File.new(input_csv).read, headers: true).collect{ |row|
 }.select{ |row|
   row["#{theme}_superclass"]
 }.map{ |row|
-  if row['extra_tags']
-    row['extra_tags'] = row['extra_tags'].split(',').map{ |kv|
-      kv.split('=').map(&:strip)
-    }.to_h
+  begin
+    if row['extra_tags']
+      row['extra_tags'] = row['extra_tags'].split(',').map{ |kv|
+        kv.split('=').map(&:strip)
+      }.to_h
+    end
+    row
+  rescue StandardError
+    puts 'ERROR extra_tags'
+    puts row['extra_tags'].inspect
+    exit 1
   end
-  row
 }
 
 
 error = csv.select{ |row|
   row.slice("#{theme}_priority", "#{theme}_superclass", 'key', 'value').any?{ |k, v|
     k.nil? || v.nil? || k.include?(' ') || v.include?(' ')
-  } or ![nil, '', '⬤', '◯', '•'].include?(row['style'])
+  } or ![nil, '', '⬤', '◯', '•'].include?(row["#{theme}_style"])
 }
 
 if !error.empty?
