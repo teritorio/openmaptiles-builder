@@ -20,7 +20,7 @@ plus_tags = CSV.new(File.new(tags_csv).read, headers: true).collect{ |row|
 csv = CSV.new(File.new(input_csv).read, headers: true).collect{ |row|
   row.to_h.transform_values{ |v| v.strip == '' ? nil : v.strip }
 }.collect{ |row|
-  row.slice(*(['superclass:name:fr', 'superclass', 'class:name:fr', 'class', 'zoom', 'style', 'priority'].map{ |k| "#{theme}_#{k}" } + ['key', 'value', 'extra_tags', 'name:fr']))
+  row.slice(*(['superclass:name:fr', 'superclass', 'class:name:fr', 'class', 'zoom', 'style', 'priority'].map{ |k| "#{theme}_#{k}" } + ['name_over_value', 'key', 'value', 'extra_tags', 'name:fr']))
 }.select{ |row|
   row["#{theme}_superclass"]
 }.map{ |row|
@@ -52,16 +52,27 @@ if !error.empty?
 end
 
 
+names = csv.collect{ |row|
+  row['name_over_value'] || row['value']
+}.group_by{ |r| r }.transform_values(&:size).select{ |_k, s| s >= 2 }
+
+if !names.empty?
+  puts 'ERROR: duplicate row names'
+  puts names.inspect
+  exit 1
+end
+
 
 hierarchy = csv.group_by{ |row| row["#{theme}_superclass"] }.collect{ |superclass, c|
   c0 = c[0]
   c = c.collect{ |r|
-    r.slice(*(['class:name:fr', 'class', 'zoom', 'style', 'priority'].map{ |k| "#{theme}_#{k}" } + ['key', 'value', 'extra_tags', 'name:fr']))
+    r.slice(*(['class:name:fr', 'class', 'zoom', 'style', 'priority'].map{ |k| "#{theme}_#{k}" } + ['name_over_value', 'key', 'value', 'extra_tags', 'name:fr']))
   }.group_by{ |r| r["#{theme}_class"] }.collect{ |classs, sc|
     sc0 = sc[0]
     sc = sc.collect{ |rr|
-      [rr['value'], {
-        label: { en: rr['value'], fr: rr['name:fr'] },
+      name = rr['name_over_value'] || rr['value']
+      [name, {
+        label: { en: name, fr: rr['name:fr'] },
         zoom: rr["#{theme}_zoom"].to_i,
         style: rr["#{theme}_style"],
         priority: rr["#{theme}_priority"].to_i,
