@@ -62,7 +62,7 @@ mv data/tiles.mbtiles ../mbtiles/openmaptiles-v3-france-z7-z9.mbtiles && \
 cp ../france-z10-z14.bbox data/merge.bbox && \
 sed -i 's/MIN_ZOOM.*/MIN_ZOOM=10/' .env && \
 sed -i 's/MAX_ZOOM.*/MAX_ZOOM=14/' .env && \
-make generate-tiles area=merge && \
+make generate-tiles area=merge
 mv data/tiles.mbtiles ../mbtiles/openmaptiles-v3-france-z10-z14.mbtiles
 cd ..
 
@@ -79,3 +79,4 @@ docker-compose run --rm build bash -e -c "
 "
 
 cp ontology-tourism.json ./mbtiles/teritorio-tourism-ontology-dev.json
+cp ontology-city.json ./mbtiles/teritorio-city-ontology-dev.json
