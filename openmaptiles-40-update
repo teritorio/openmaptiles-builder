@@ -15,8 +15,8 @@ docker-compose run --rm build bash -e -c "
     osmium merge -v --progress \
         --overwrite -o merge.osm.pbf \
         france-latest.osm.pbf \
-        andorra-latest.osm.pbf
-        guernsey-jersey-latest.osm.pbf
+        andorra-latest.osm.pbf \
+        guernsey-jersey-latest.osm.pbf \
         spain-latest.osm.pbf \
 "
 
@@ -29,21 +29,17 @@ rm -fr build
 cd -
 
 docker-compose run --rm build bash -e -c "
-    ./ontology-build.sh && \
-
-    # Tourism
-    ruby ontology2layer.rb tourism \
-        ontology-tourism.json \
-        openmaptiles/layers/poi_tourism/poi_tourism.yaml \
-        openmaptiles/layers/poi_tourism/mapping.yaml \
-        openmaptiles/layers/poi_tourism/class.sql
-
-    # City
-    ruby ontology2layer.rb city \
-        ontology-city.json \
-        openmaptiles/layers/poi_city/poi_city.yaml \
-        openmaptiles/layers/poi_city/mapping.yaml \
-        openmaptiles/layers/poi_city/class.sql
+    ./ontology-build.sh && \\
+    ruby ontology2layer.rb tourism \\
+        ontology-tourism.json \\
+        openmaptiles/layers/poi_tourism/poi_tourism.yaml \\
+        openmaptiles/layers/poi_tourism/mapping.yaml \\
+        openmaptiles/layers/poi_tourism/class.sql && \\
+    ruby ontology2layer.rb city \\
+        ontology-city.json \\
+        openmaptiles/layers/poi_city/poi_city.yaml \\
+        openmaptiles/layers/poi_city/mapping.yaml \\
+        openmaptiles/layers/poi_city/class.sql \\
 "
 
 cd openmaptiles && \
