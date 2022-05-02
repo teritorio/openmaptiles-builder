@@ -6,7 +6,7 @@ set -e
 source .env
 
 # Tourism
-curl -L "${DOC_TOURISM}/gviz/tq?tqx=out:csv&sheet=POI_liste_teritorio" > ontology-tourism.csv
+curl -L "${DOC_TOURISM}/gviz/tq?tqx=out:csv&sheet=POI" > ontology-tourism.csv
 curl -L "${DOC_TOURISM}/gviz/tq?tqx=out:csv&sheet=Sous-Attributs" > ontology-tourism-extra_tags.csv
 
 ruby ontology-build.rb tourism 'Ontology Tourism' \
@@ -15,7 +15,7 @@ ruby ontology-build.rb tourism 'Ontology Tourism' \
     ontology-tourism.json
 
 # City
-curl -L "${DOC_CITY}/gviz/tq?tqx=out:csv&sheet=POI_liste_teritorio" > ontology-city.csv
+curl -L "${DOC_CITY}/gviz/tq?tqx=out:csv&sheet=POI" > ontology-city.csv
 curl -L "${DOC_CITY}/gviz/tq?tqx=out:csv&sheet=Sous-Attributs" > ontology-city-extra_tags.csv
 
 ruby ontology-build.rb city 'Ontology City' \
