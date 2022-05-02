@@ -70,9 +70,9 @@ hierarchy = csv.group_by{ |row| row["#{theme}_superclass"] }.collect{ |superclas
   }.group_by{ |r| r["#{theme}_class"] }.collect{ |classs, sc|
     sc0 = sc[0]
     sc = sc.collect{ |rr|
-      name = rr['name_over_value'] || rr['value']
-      [name, {
-        label: { en: name, fr: rr['name:fr'] },
+      value = rr['name_over_value'] || rr['value']
+      [value, {
+        label: { en: value, fr: rr['name:fr'] },
         zoom: rr["#{theme}_zoom"].to_i,
         style: rr["#{theme}_style"],
         priority: rr["#{theme}_priority"].to_i,
