@@ -6,9 +6,27 @@ Encoding.default_internal = Encoding::UTF_8
 
 theme = ARGV[0]
 name = ARGV[1]
-input_csv = ARGV[2]
-tags_csv = ARGV[3]
-ontology_json = ARGV[4]
+superclass_csv = ARGV[2]
+input_csv = ARGV[3]
+tags_csv = ARGV[4]
+ontology_json = ARGV[5]
+
+superclasses = CSV.new(File.new(superclass_csv).read, headers: true).collect{ |row|
+  row.to_h.transform_values{ |v| v.strip == '' ? nil : v.strip }
+}.collect{ |row|
+  row.slice(*(%w[superclass color_icon color_text class].map{ |k| "#{theme}_#{k}" }))
+}.select{ |row|
+  row["#{theme}_color_icon"]
+}.collect{ |row|
+  [
+    row["#{theme}_superclass"],
+    {
+      color_fill: row["#{theme}_color_icon"].downcase,
+      color_line: row["#{theme}_color_text"].downcase,
+    }
+  ]
+}.to_h
+
 
 plus_tags = CSV.new(File.new(tags_csv).read, headers: true).collect{ |row|
   row['tag'].gsub(' ', '').gsub(' ', '')
@@ -97,6 +115,8 @@ hierarchy = csv.group_by{ |row| row["#{theme}_superclass"] }.collect{ |superclas
   pop = pop[:subclass] if pop
   [superclass, {
     label: { en: superclass, fr: c0["#{theme}_superclass:name:fr"] },
+    color_fill: superclasses[superclass][:color_fill],
+    color_line: superclasses[superclass][:color_line],
     class: c.merge(pop || {}),
   }]
 }.to_h
