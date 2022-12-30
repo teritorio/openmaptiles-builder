@@ -36,7 +36,7 @@ query = query.gsub('{extra_attributes}', osm_tags_extra.map{ |t| "tags->'#{t}' A
 poi_yaml['layer']['datasource']['query'] = query
 
 keep_fields = %w[geometry name name_en name_de superclass class subclass zoom priority style agg_stop layer level indoor rank]
-poi_yaml['layer']['fields'] = poi_yaml['layer']['fields'].slice(*keep_fields).merge(osm_tags_extra.map{ |t| [t, nil] }.to_h)
+poi_yaml['layer']['fields'] = poi_yaml['layer']['fields'].slice(*keep_fields).merge(osm_tags_extra.map{ |t| [t, ''] }.to_h)
 File.write(layer_yaml, YAML.dump(poi_yaml))
 
 file = File.open(mapping_yaml, 'w')
@@ -92,7 +92,7 @@ def_poi_fields: &poi_fields
   - name: sport
     key: sport
     type: string
-  - name: access -- for reject filters
+  - name: access # for reject filters
     key: access
     type: string
 
