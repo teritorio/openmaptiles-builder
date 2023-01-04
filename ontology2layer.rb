@@ -43,9 +43,9 @@ file = File.open(mapping_yaml, 'w')
 file.write("
 tags:
   include: [#{include_tags}]
-#{yaml_str.gsub('def_poi:', 'def_poi: &poi_mapping').gsub('---', '')}
+#{yaml_str.gsub('def_poi:', "def_#{theme}_poi: &poi_#{theme}_mapping").gsub('---', '')}
 
-def_poi_fields: &poi_fields
+def_poi_#{theme}_fields: &poi_#{theme}_fields
   - name: osm_id
     type: id
   - name: geometry
@@ -97,20 +97,20 @@ def_poi_fields: &poi_fields
     type: string
 
 tables:
-  # etldoc: imposm3 -> osm_poi_point
-  poi_point:
+  # etldoc: imposm3 -> osm_poi_#{theme}_point
+  poi_#{theme}_point:
     type: point
-    columns: *poi_fields
-    mapping: *poi_mapping
+    columns: *poi_#{theme}_fields
+    mapping: *poi_#{theme}_mapping
     filters:
       reject:
         access: ['no']
 
-  # etldoc: imposm3 -> osm_poi_polygon
-  poi_polygon:
+  # etldoc: imposm3 -> osm_poi_#{theme}_polygon
+  poi_#{theme}_polygon:
     type: polygon
-    columns: *poi_fields
-    mapping: *poi_mapping
+    columns: *poi_#{theme}_fields
+    mapping: *poi_#{theme}_mapping
     filters:
       reject:
         access: ['no']
