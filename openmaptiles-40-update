@@ -35,7 +35,7 @@ wget -P pbf http://download.openstreetmap.fr/extracts/oceania/polynesie-latest.o
 docker-compose run --rm build bash -e -c "
     cd /data/pbf
     osmium merge -v --progress \
-        --overwrite -o merge.osm.pbf \
+        --overwrite -o merge-latest.osm.pbf \
         france-latest.osm.pbf \
         andorra-latest.osm.pbf \
         guernsey-jersey-latest.osm.pbf \
@@ -44,23 +44,7 @@ docker-compose run --rm build bash -e -c "
         spain-latest.osm.pbf \
         canary-islands-latest.osm.pbf \
         morocco-latest.osm.pbf \
-        madagascar-latest.osm.pbf \
-        saint_pierre_et_miquelon-latest.osm.pbf \
-        martinique-latest.osm.pbf \
-        guadeloupe.osm.pbf \
-        guyane-latest.osm.pbf \
-        reunion-latest.osm.pbf \
-        mayotte-latest.osm.pbf \
-        polynesie-latest.osm.pbf
 "
-
-mkdir -p openmaptiles/data/
-mv -f pbf/merge.osm.pbf openmaptiles/data/
-
-cd openmaptiles
-docker-compose down -v && \
-rm -fr build
-cd -
 
 docker-compose run --rm build bash -e -c "
     ./ontology-build.sh && \\
@@ -68,44 +52,42 @@ docker-compose run --rm build bash -e -c "
         ontology-tourism.json \\
         openmaptiles/layers/poi_tourism/poi_tourism.yaml \\
         openmaptiles/layers/poi_tourism/mapping.yaml \\
-        openmaptiles/layers/poi_tourism/class.sql && \\
+        openmaptiles/layers/poi_tourism/class.sql \\
+        planetiler-openmaptiles/src/main/java/org/openmaptiles/layers/PoiTourismClass.java && \\
     ruby ontology2layer.rb city \\
         ontology-city.json \\
         openmaptiles/layers/poi_city/poi_city.yaml \\
         openmaptiles/layers/poi_city/mapping.yaml \\
         openmaptiles/layers/poi_city/class.sql \\
+        planetiler-openmaptiles/src/main/java/org/openmaptiles/layers/PoiCityClass.java \\
 "
 
 generate() {
     AREA=$1
     ZOOM_MIN=$2
     ZOOM_MAX=$3
-    cp ../bbox/${AREA}-z${ZOOM_MIN}-z${ZOOM_MAX}.bbox data/merge.bbox && \
-    sed -i "s/MIN_ZOOM.*/MIN_ZOOM=${ZOOM_MIN}/" .env && \
-    sed -i "s/MAX_ZOOM.*/MAX_ZOOM=${ZOOM_MAX}/" .env && \
-    make generate-tiles area=merge && \
-    mv data/tiles.mbtiles ../mbtiles/openmaptiles-v3-${AREA}-z${ZOOM_MIN}-z${ZOOM_MAX}.mbtiles && \
+    JAVA_TOOL_OPTIONS="-Xmx2g" java -jar target/*with-deps.jar \
+        --force --download \
+        --osm-path=../pbf/${AREA}-latest.osm.pbf \
+        --polygon=../bbox/${AREA}.poly \
+        --minzoom=${ZOOM_MIN} \
+        --maxzoom=${ZOOM_MAX} \
+        --mbtiles=../mbtiles/openmaptiles-v3-${AREA}-z${ZOOM_MIN}-z${ZOOM_MAX}.mbtiles
 }
 
-cd openmaptiles && \
-make && \
-make start-db && \
-make import-data && \
-make import-osm area=merge && \
-make import-sql && \
-make import-wikidata && \
-make analyze-db && \
-generate("saint_pierre_et_miquelon", 7, 14) && \
-generate("antilles", 7, 14) && \
-generate("mayotte", 7, 14) && \
-generate("reunion", 7, 14) && \
-generate("polynesie", 7, 14) && \
-generate("guyane", 7, 9) && \
-generate("guyane", 10, 14) && \
-generate("madagascar", 7, 9) && \
-generate("madagascar", 10, 14) && \
-generate("europe", 7, 9) && \
-generate("europe", 10, 14) && \
+
+cd planetiler-openmaptiles && \
+git checkout src/main/java/org/openmaptiles/generated/ && \
+./scripts/regenerate-openmaptiles.sh openmaptiles file://`pwd`/../ && \
+generate "saint_pierre_et_miquelon" 7 14 && \
+generate "martinique" 7 14 && \
+generate "guadeloupe" 7 14 && \
+generate "mayotte" 7 14 && \
+generate "reunion" 7 14 && \
+generate "polynesie" 7 14 && \
+generate "guyane" 7 14 && \
+generate "madagascar" 7 14 && \
+generate "merge" 7 14 && \
 cd ..
 
 
@@ -116,17 +98,15 @@ docker-compose run --rm build bash -e -c "
         --attribution '<a href=\"https://www.teritorio.fr/\" target=\"_blank\">&copy; Teritorio</a> <a href=\"https://www.openmaptiles.org/\" target=\"_blank\">&copy; OpenMapTiles</a> <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\">&copy; OpenStreetMap contributors</a>' \
         --force -o teritorio-dev.mbtiles \
         openmaptiles-v3-z0-z6.mbtiles \
-        openmaptiles-v3-europe-z7-z9.mbtiles \
-        openmaptiles-v3-europe-z10-z14.mbtiles \
+        openmaptiles-v3-merge-z7-z14.mbtiles \
         openmaptiles-v3-saint_pierre_et_miquelon-z7-z14.mbtiles \
-        openmaptiles-v3-antilles-z7-z14.mbtiles \
+        openmaptiles-v3-martinique-z7-z14.mbtiles \
+        openmaptiles-v3-guadeloupe-z7-z14.mbtiles \
         openmaptiles-v3-mayotte-z7-z14.mbtiles \
         openmaptiles-v3-reunion-z7-z14.mbtiles \
         openmaptiles-v3-polynesie-z7-z14.mbtiles \
-        openmaptiles-v3-guyane-z7-z9.mbtiles \
-        openmaptiles-v3-guyane-z10-z14.mbtiles \
-        openmaptiles-v3-madagascar-z7-z9.mbtiles \
-        openmaptiles-v3-madagascar-z10-z14.mbtiles
+        openmaptiles-v3-guyane-z7-z14.mbtiles \
+        openmaptiles-v3-madagascar-z7-z14.mbtiles
 "
 
 cp ontology-tourism.json ./mbtiles/teritorio-tourism-ontology-dev.json
