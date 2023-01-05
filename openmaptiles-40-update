@@ -72,6 +72,17 @@ docker-compose run --rm build bash -e -c "
         openmaptiles/layers/poi_city/class.sql \\
 "
 
+generate() {
+    AREA=$1
+    ZOOM_MIN=$2
+    ZOOM_MAX=$3
+    cp ../bbox/${AREA}-z${ZOOM_MIN}-z${ZOOM_MAX}.bbox data/merge.bbox && \
+    sed -i "s/MIN_ZOOM.*/MIN_ZOOM=${ZOOM_MIN}/" .env && \
+    sed -i "s/MAX_ZOOM.*/MAX_ZOOM=${ZOOM_MAX}/" .env && \
+    make generate-tiles area=merge && \
+    mv data/tiles.mbtiles ../mbtiles/openmaptiles-v3-${AREA}-z${ZOOM_MIN}-z${ZOOM_MAX}.mbtiles && \
+}
+
 cd openmaptiles && \
 make && \
 make start-db && \
@@ -80,72 +91,17 @@ make import-osm area=merge && \
 make import-sql && \
 make import-wikidata && \
 make analyze-db && \
-\
-cp ../bbox/saint_pierre_et_miquelon-z7-z14.bbox data/merge.bbox && \
-sed -i 's/MIN_ZOOM.*/MIN_ZOOM=7/' .env && \
-sed -i 's/MAX_ZOOM.*/MAX_ZOOM=14/' .env && \
-make generate-tiles area=merge && \
-mv data/tiles.mbtiles ../mbtiles/openmaptiles-v3-saint_pierre_et_miquelon-z7-z14.mbtiles && \
-\
-cp ../bbox/antilles-z7-z14.bbox data/merge.bbox && \
-sed -i 's/MIN_ZOOM.*/MIN_ZOOM=7/' .env && \
-sed -i 's/MAX_ZOOM.*/MAX_ZOOM=14/' .env && \
-make generate-tiles area=merge && \
-mv data/tiles.mbtiles ../mbtiles/openmaptiles-v3-antilles-z7-z14.mbtiles && \
-\
-cp ../bbox/mayotte-z10-z14.bbox data/merge.bbox && \
-sed -i 's/MIN_ZOOM.*/MIN_ZOOM=10/' .env && \
-sed -i 's/MAX_ZOOM.*/MAX_ZOOM=14/' .env && \
-make generate-tiles area=merge && \
-mv data/tiles.mbtiles ../mbtiles/openmaptiles-v3-mayotte-z10-z14.mbtiles && \
-\
-cp ../bbox/reunion-z7-z14.bbox data/merge.bbox && \
-sed -i 's/MIN_ZOOM.*/MIN_ZOOM=7/' .env && \
-sed -i 's/MAX_ZOOM.*/MAX_ZOOM=14/' .env && \
-make generate-tiles area=merge && \
-mv data/tiles.mbtiles ../mbtiles/openmaptiles-v3-reunion-z7-z14.mbtiles && \
-\
-cp ../bbox/polynesie-z7-z14.bbox data/merge.bbox && \
-sed -i 's/MIN_ZOOM.*/MIN_ZOOM=7/' .env && \
-sed -i 's/MAX_ZOOM.*/MAX_ZOOM=14/' .env && \
-make generate-tiles area=merge && \
-mv data/tiles.mbtiles ../mbtiles/openmaptiles-v3-polynesie-z7-z14.mbtiles && \
-\
-cp ../bbox/guyane-z7-z9.bbox data/merge.bbox && \
-sed -i 's/MIN_ZOOM.*/MIN_ZOOM=7/' .env && \
-sed -i 's/MAX_ZOOM.*/MAX_ZOOM=9/' .env && \
-make generate-tiles area=merge && \
-mv data/tiles.mbtiles ../mbtiles/openmaptiles-v3-guyane-z7-z9.mbtiles && \
-\
-cp ../bbox/guyane-z10-z14.bbox data/merge.bbox && \
-sed -i 's/MIN_ZOOM.*/MIN_ZOOM=10/' .env && \
-sed -i 's/MAX_ZOOM.*/MAX_ZOOM=14/' .env && \
-make generate-tiles area=merge
-mv data/tiles.mbtiles ../mbtiles/openmaptiles-v3-guyane-z10-z14.mbtiles && \
-\
-cp ../bbox/madagascar-z7-z9.bbox data/merge.bbox && \
-sed -i 's/MIN_ZOOM.*/MIN_ZOOM=7/' .env && \
-sed -i 's/MAX_ZOOM.*/MAX_ZOOM=9/' .env && \
-make generate-tiles area=merge && \
-mv data/tiles.mbtiles ../mbtiles/openmaptiles-v3-madagascar-z7-z9.mbtiles && \
-\
-cp ../bbox/madagascar-z10-z14.bbox data/merge.bbox && \
-sed -i 's/MIN_ZOOM.*/MIN_ZOOM=10/' .env && \
-sed -i 's/MAX_ZOOM.*/MAX_ZOOM=14/' .env && \
-make generate-tiles area=merge
-mv data/tiles.mbtiles ../mbtiles/openmaptiles-v3-madagascar-z10-z14.mbtiles && \
-\
-cp ../bbox/europe-z7-z9.bbox data/merge.bbox && \
-sed -i 's/MIN_ZOOM.*/MIN_ZOOM=7/' .env && \
-sed -i 's/MAX_ZOOM.*/MAX_ZOOM=9/' .env && \
-make generate-tiles area=merge && \
-mv data/tiles.mbtiles ../mbtiles/openmaptiles-v3-europe-z7-z9.mbtiles && \
-\
-cp ../bbox/europe-z10-z14.bbox data/merge.bbox && \
-sed -i 's/MIN_ZOOM.*/MIN_ZOOM=10/' .env && \
-sed -i 's/MAX_ZOOM.*/MAX_ZOOM=14/' .env && \
-make generate-tiles area=merge
-mv data/tiles.mbtiles ../mbtiles/openmaptiles-v3-europe-z10-z14.mbtiles
+generate("saint_pierre_et_miquelon", 7, 14) && \
+generate("antilles", 7, 14) && \
+generate("mayotte", 10, 14) && \
+generate("reunion", 7, 14) && \
+generate("polynesie", 7, 14) && \
+generate("guyane", 7, 9) && \
+generate("guyane", 10, 14) && \
+generate("madagascar", 7, 9) && \
+generate("madagascar", 10, 14) && \
+generate("europe", 7, 9) && \
+generate("europe", 10, 14) && \
 cd ..
 
 
