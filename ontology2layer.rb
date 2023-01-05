@@ -7,6 +7,7 @@ ontology_json = ARGV[1]
 layer_yaml = ARGV[2]
 mapping_yaml = ARGV[3]
 class_sql = ARGV[4]
+class_java = ARGV[5]
 ontology = JSON.parse(File.new(ontology_json).read)
 
 osm_tags_extra = ontology['osm_tags_extra']
@@ -117,43 +118,61 @@ tables:
 ")
 
 
-whens = ontology['superclass'].collect{ |k_super, superclass|
+whens = []
+expressions = []
+ontology['superclass'].collect{ |k_super, superclass|
   (superclass['class'] || {}).collect{ |k, classs|
     (classs['subclass'] || {}).collect{ |k_sub, subclass|
       [k_super, k, k_sub, subclass['zoom'], subclass['style'], subclass['priority'], subclass['osm_tags']]
     } + (classs['style'] ? [[k_super, k, nil, classs['zoom'], classs['style'], classs['priority'], classs['osm_tags']]] : [])
   }
 }.flatten(2).sort.collect{ |superclass, classs, subclass, zoom, style, priority, osm_tags|
-  superclass = "'#{superclass}'"
-  classs = "'#{classs}'"
-  subclass = subclass ? "'#{subclass}'" : 'NULL'
-  zoom ||= 18
-  style = style && style != '' ? "'#{style}'" : 'NULL'
+  superclass_sql = "'#{superclass}'"
+  classs_sql = "'#{classs}'"
+  subclass_sql = subclass ? "'#{subclass}'" : 'NULL'
+  style_sql = style && style != '' ? "'#{style}'" : 'NULL'
 
-  tags = osm_tags[0].collect{ |k, v|
+  superclass_java = "\"#{superclass}\""
+  classs_java = "\"#{classs}\""
+  subclass_java = subclass ? "\"#{subclass}\"" : 'null'
+  style_java = style && style != '' ? "'#{style}'" : 'null'
+
+  zoom ||= 18
+
+  tags_sql = []
+  tags_java = []
+  osm_tags[0].collect{ |k, v|
     if ['*', nil].include?(v)
-      "(tags?'#{k}' AND tags->'#{k}' != 'no')"
+      tags_sql << "(tags?'#{k}' AND tags->'#{k}' != 'no')"
+      tags_java << "and(matchField(\"#{k}\"), not(matchAny(\"#{k}\", \"no\")))"
     else
       negative = k[-1] == '!'
       k = k[0..-2] if negative
-      values = (v || '').split(';').map{ |t| "'#{t}'" }
+      values_sql = (v || '').split(';').map{ |t| "'#{t}'" }
+      values_java = (v || '').split(';').map{ |t| "\"#{t}\"" }
       if negative
-        if values.size == 1
-          "(NOT tags?'#{k}' OR tags->'#{k}' != #{values[0]})"
+        if values_sql.size == 1
+          tags_sql << "(NOT tags?'#{k}' OR tags->'#{k}' != #{values_sql[0]})"
+          tags_java << "not(matchAny(\"#{k}\", #{values_java[0]}))"
         else
-          "(NOT tags?'#{k}' OR tags->'#{k}' NOT IN (#{values.join(', ')}))"
+          tags_sql << "(NOT tags?'#{k}' OR tags->'#{k}' NOT IN (#{values_sql.join(', ')}))"
+          tags_java << "not(matchAny(\"#{k}\", #{values_java.join(', ')}))"
         end
-      elsif values.size == 1
-        "tags?'#{k}' AND tags->'#{k}' = #{values[0]}"
+      elsif values_sql.size == 1
+        tags_sql << "tags?'#{k}' AND tags->'#{k}' = #{values_sql[0]}"
+        tags_java << "matchAny(\"#{k}\", #{values_java[0]})"
       else
-        "tags?'#{k}' AND tags->'#{k}' IN (#{values.join(', ')})"
+        tags_sql << "tags?'#{k}' AND tags->'#{k}' IN (#{values_sql.join(', ')})"
+        tags_java << "matchAny(\"#{k}\", #{values_java.join(', ')})"
       end
     end
-  }.join(' AND ')
+  }
 
-  if superclass == "'remarkable'" && classs == "'attraction_activity'" && subclass == "'attraction'"
-    "(SELECT
-  #{superclass}, #{classs}, #{subclass},
+  tags_java = tags_java.size == 1 ? tags_java[0] : "and(#{tags_java.join(', ')})"
+
+  whens << if superclass_sql == "'remarkable'" && classs_sql == "'attraction_activity'" && subclass_sql == "'attraction'"
+             "(SELECT
+  #{superclass_sql}, #{classs_sql}, #{subclass_sql},
   CASE
     WHEN score >= 11 THEN 13
     WHEN score >= 5 THEN 14
@@ -171,12 +190,16 @@ FROM (
     CASE WHEN tags ?& ARRAY['wikipedia', 'wikidata'] THEN 5 ELSE 0 END +
     CASE WHEN tags?'name' THEN 1 ELSE 0 END +
     CASE WHEN tags ?& ARRAY['website', 'phone', 'email', 'opening_hours'] THEN 1 ELSE 0 END AS score
-  WHERE #{tags}
+  WHERE #{tags_sql.join(' AND ')}
 ) AS score)"
-  else
-    "            SELECT #{superclass}, #{classs}, #{subclass}, #{zoom}, #{style}, #{priority} WHERE #{tags}"
-  end
-}.join(" UNION ALL\n")
+           else
+             "            SELECT #{superclass_sql}, #{classs_sql}, #{subclass_sql}, #{zoom}, #{style_sql}, #{priority} WHERE #{tags_sql.join(' AND ')}"
+           end
+
+  expressions << "MultiExpression.entry(
+      new PoiClass(#{superclass_java}, #{classs_java}, #{subclass_java}, #{zoom}, #{style_java}, #{priority}),
+      #{tags_java})"
+}
 
 file = File.open(class_sql, 'w')
 file.write("
@@ -189,7 +212,7 @@ CREATE OR REPLACE FUNCTION poi_#{theme}_class(key TEXT, value TEXT, tags hstore)
     priority INTEGER
 ) AS $$
     SELECT * FROM (
-#{whens}
+#{whens.join(" UNION ALL\n")}
     ) AS t(superclass, class, subclass, zoom, style, priority)
     ORDER BY
         zoom,
@@ -199,3 +222,33 @@ $$
 LANGUAGE SQL
 IMMUTABLE PARALLEL SAFE;
 ")
+
+file = File.open(class_java, 'w')
+file.write("package org.openmaptiles.layers;
+
+import static com.onthegomap.planetiler.expression.Expression.*;
+
+import com.onthegomap.planetiler.expression.MultiExpression;
+import java.util.Arrays;
+
+public class Poi#{theme.capitalize}Class {
+  record PoiClass(
+    String superclass,
+    String class_,
+    String subclass,
+    int zoom,
+    char style,
+    int priority) {}
+
+  static MultiExpression.Entry[] POI_CLASS_ENTRIES = {
+    #{expressions.join(",\n    ")}
+  };
+
+  public static MultiExpression.Index<PoiClass> POI_CLASS =
+    MultiExpression.of(Arrays.asList((MultiExpression.Entry<PoiClass>[]) POI_CLASS_ENTRIES)).simplify().index();
+}
+")
+
+
+# // Multiple list as compier perf workaround
+# //#{expressions.each_slice(25).collect{ |s| "MultiExpression.of(List.of(\n      " + s.join(",\n      ") + "\n    ))" }.join(",\n    ")}
