@@ -1,3 +1,7 @@
+#!/usr/bin/bash
+
+set -e
+
 wget -P pbf \
     http://download.geofabrik.de/europe/spain-latest.osm.pbf \
     http://download.geofabrik.de/africa/canary-islands-latest.osm.pbf \
@@ -57,7 +61,7 @@ curl "http://polygons.openstreetmap.fr/get_poly.py?params=0.040000-0.010000-0.01
 # http://polygons.openstreetmap.fr/get_image.py?params=0.040000-0.010000-0.010000&id=1403916,1311341,9407,1124039,52411,2171347,270009,367988,3630439
 
 
-wget -P bbox \
+wget --no-clobber -P bbox \
     http://download.geofabrik.de/africa/madagascar.poly \
     http://download.openstreetmap.fr/polygons/north-america/saint_pierre_et_miquelon.poly \
     http://download.openstreetmap.fr/polygons/central-america/martinique.poly \

@@ -1,5 +1,18 @@
-docker-compose build
+#!/usr/bin/bash
+
+set -e
 
 # OpenMapTiles
 
-git clone -b teritorio --recurse-submodules https://github.com/frodrigo/openmaptiles.git
+git clone -b teritorio3 --recurse-submodules https://github.com/frodrigo/openmaptiles.git
+
+
+# Planetiler
+
+docker-compose build
+
+git submodule init
+git submodule update
+cd planetiler-openmaptiles
+./mvnw clean package -Dmaven.test.skip
+cd ..
