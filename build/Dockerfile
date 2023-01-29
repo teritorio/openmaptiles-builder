@@ -1,4 +1,4 @@
-FROM debian:10.5 AS builder
+FROM debian:11.6 AS builder
 
 RUN apt update && apt install -y \
     build-essential \
@@ -12,7 +12,7 @@ RUN cd /tmp && \
     make
 
 
-FROM debian:10.5
+FROM debian:11.6
 
 COPY --from=builder /tmp/tippecanoe/tippecanoe /usr/bin/tippecanoe
 COPY --from=builder /tmp/tippecanoe/tile-join /usr/bin/tile-join
