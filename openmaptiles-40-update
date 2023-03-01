@@ -79,6 +79,7 @@ generate() {
 cd planetiler-openmaptiles && \
 git checkout src/main/java/org/openmaptiles/generated/ && \
 ./scripts/regenerate-openmaptiles.sh openmaptiles file://`pwd`/../ && \
+./mvnw clean package -Dmaven.test.skip && \
 generate "saint_pierre_et_miquelon" 7 14 && \
 generate "martinique" 7 14 && \
 generate "guadeloupe" 7 14 && \
