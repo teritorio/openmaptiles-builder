@@ -10,6 +10,25 @@ class_sql = ARGV[4]
 class_java = ARGV[5]
 ontology = JSON.parse(File.new(ontology_json).read)
 
+
+class String
+  def unquote
+    s = self.dup
+
+    case self[0,1]
+    when "'", '"', '`'
+      s[0] = ''
+    end
+
+    case self[-1,1]
+    when "'", '"', '`'
+      s[-1] = ''
+    end
+
+    return s
+  end
+end
+
 osm_tags_extra = ontology['osm_tags_extra']
 
 osm_tags = ontology['superclass'].values.collect{ |superclass|
@@ -18,7 +37,15 @@ osm_tags = ontology['superclass'].values.collect{ |superclass|
       subclass['osm_tags']
     } + [classs['osm_tags'] || []]
   } + [[superclass['osm_tags'] || []]]
-}.flatten.compact.collect(&:to_a).flatten(1).uniq.select{ |k, _| k[-1] != '!' }.group_by{ |k, _| k }.transform_values{ |values| values.collect{ |_, v| v }.sort - ['*'] }.select{ |_k, v| v.size > 0 }
+}.flatten.compact.collect{ |t|
+  t[1..-2].split('][')
+}.flatten.collect{ |t|
+  t.split(/(=|~=|=~|!=|!~|~)/, 2).collect(&:unquote)
+}.group_by(&:first).transform_values{ |v|
+  v.collect{ |vv| vv[2] }.flatten.sort
+}.select{ |k, v|
+  v != []
+}.to_h
 
 osm_tags['leisure'] = ['__any__']
 osm_tags['landuse'] = ['__any__']
@@ -141,29 +168,26 @@ ontology['superclass'].collect{ |k_super, superclass|
 
   tags_sql = []
   tags_java = []
-  osm_tags[0].collect{ |k, v|
-    if ['*', nil].include?(v)
+  osm_tags[1..-2].split('][').collect{ |t|
+    t.split(/(=|~=|=~|!=|!~|~)/, 2).collect(&:unquote)
+  }.collect{ |k, o, v|
+    if o.nil?
       tags_sql << "(tags?'#{k}' AND tags->'#{k}' != 'no')"
       tags_java << "and(matchField(\"#{k}\"), not(matchAny(\"#{k}\", \"no\")))"
     else
-      negative = k[-1] == '!'
-      k = k[0..-2] if negative
-      values_sql = (v || '').split(';').map{ |t| "'#{t}'" }
-      values_java = (v || '').split(';').map{ |t| "\"#{t}\"" }
-      if negative
-        if values_sql.size == 1
-          tags_sql << "(NOT tags?'#{k}' OR tags->'#{k}' != #{values_sql[0]})"
-          tags_java << "not(matchAny(\"#{k}\", #{values_java[0]}))"
-        else
-          tags_sql << "(NOT tags?'#{k}' OR tags->'#{k}' NOT IN (#{values_sql.join(', ')}))"
-          tags_java << "not(matchAny(\"#{k}\", #{values_java.join(', ')}))"
-        end
-      elsif values_sql.size == 1
-        tags_sql << "tags?'#{k}' AND tags->'#{k}' = #{values_sql[0]}"
-        tags_java << "matchAny(\"#{k}\", #{values_java[0]})"
+      if o == '='
+        values_sql = "'#{v}'"
+        values_java = "\"#{v}\""
+        tags_sql << "tags?'#{k}' AND tags->'#{k}' = #{values_sql}"
+        tags_java << "matchAny(\"#{k}\", #{values_java})"
+      elsif o == '!~'
+        # Treat regex as list
+        values_sql = v.split('|').map{ |t| "'#{t}'" }
+        values_java = v.split('|').map{ |t| "\"#{t}\"" }
+        tags_sql << "(NOT tags?'#{k}' OR tags->'#{k}' NOT IN (#{values_sql.join(', ')}))"
+        tags_java << "not(matchAny(\"#{k}\", #{values_java.join(', ')}))"
       else
-        tags_sql << "tags?'#{k}' AND tags->'#{k}' IN (#{values_sql.join(', ')})"
-        tags_java << "matchAny(\"#{k}\", #{values_java.join(', ')})"
+        Raise 'Not implemented'
       end
     end
   }

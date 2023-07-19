@@ -44,9 +44,7 @@ csv = CSV.new(File.new(input_csv).read, headers: true).collect{ |row|
 }.map{ |row|
   begin
     if row['extra_tags']
-      row['extra_tags'] = row['extra_tags'].split(',').map{ |kv|
-        kv.split('=').map(&:strip)
-      }.to_h
+      row['extra_tags'] = row['extra_tags'].split(',').map(&:strip)
     end
     row
   rescue StandardError
@@ -94,7 +92,7 @@ hierarchy = csv.group_by{ |row| row["#{theme}_superclass"] }.collect{ |superclas
         zoom: rr["#{theme}_zoom"].to_i,
         style: rr["#{theme}_style"],
         priority: rr["#{theme}_priority"].to_i,
-        osm_tags: [{ rr['key'] => rr['value'] }.merge(rr['extra_tags'] || {})]
+        osm_tags: (["\"#{rr['key']}\"=\"#{rr['value']}\""] + (rr['extra_tags'] || [])).collect{ |t| "[#{t}]" }.join
       }]
     }.to_h
     if sc
