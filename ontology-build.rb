@@ -28,12 +28,41 @@ superclasses = CSV.new(File.new(superclass_csv).read, headers: true).collect{ |r
 }.to_h
 
 
-plus_tags = CSV.new(File.new(tags_csv).read, headers: true).collect{ |row|
-  row['tag'].gsub(' ', '').gsub(' ', '')
-}.select{ |tag|
-  tag != ''
-}.uniq
-
+plus_groups = {}
+current_group = {}
+current_tag = {}
+CSV.new(File.new(tags_csv).read, headers: true).collect{ |row|
+  row.to_h.transform_values{ |v| v.strip == '' ? nil : v.strip }
+}.collect{ |row|
+  row.slice('tag', 'value', 'name:fr')
+}.select{ |row|
+  row['tag'] || row['value']
+}.each{ |row|
+  tag = row['tag']
+  if tag&.start_with?('&')
+    current_group = {}
+    plus_groups[tag[1..]] = current_group
+  elsif !tag.nil?
+    current_tag = {
+      label: { fr: row['name:fr'] },
+      values: row['value'] == '*' ? nil : [],
+    }
+    current_group[tag] = current_tag
+  else
+    if current_tag[:values].nil?
+      puts "Error: value for non enum key: #{row['value']}"
+    end
+    current_tag[:values] << { value: row['value'], label: { fr: row['name:fr'] } }
+  end
+}
+plus_groups.each{ |group_id, group|
+  group.each{ |tag, ct|
+    if !ct[:values].nil? && ct[:values].empty?
+      puts "Error: osm_tags_extra \"#{tag}\" with no values"
+      ct[:values] = nil
+    end
+  }
+}
 
 csv = CSV.new(File.new(input_csv).read, headers: true).collect{ |row|
   row.to_h.transform_values{ |v| v.strip == '' ? nil : v.strip }
@@ -122,5 +151,5 @@ file = File.open(ontology_json, 'w')
 file.write(JSON.pretty_generate({
   name: name,
   superclass: hierarchy,
-  osm_tags_extra: plus_tags,
+  osm_tags_extra: plus_groups,
 }))

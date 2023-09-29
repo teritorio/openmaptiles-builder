@@ -29,7 +29,7 @@ class String
   end
 end
 
-osm_tags_extra = ontology['osm_tags_extra']
+osm_tags_extra = ontology['osm_tags_extra'].values.collect(&:keys).flatten
 
 osm_tags = ontology['superclass'].values.collect{ |superclass|
   (superclass['class'] || {}).values.collect{ |classs|
