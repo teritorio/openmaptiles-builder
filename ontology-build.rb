@@ -12,7 +12,7 @@ tags_csv = ARGV[4]
 ontology_json = ARGV[5]
 
 superclasses = CSV.new(File.new(superclass_csv).read, headers: true).collect{ |row|
-  row.to_h.transform_values{ |v| v.strip == '' ? nil : v.strip }
+  row.to_h.transform_values{ |v| v.nil? || v.strip == '' ? nil : v.strip }
 }.collect{ |row|
   row.slice(*(%w[superclass color_icon color_text class].map{ |k| "#{theme}_#{k}" }))
 }.select{ |row|
@@ -32,7 +32,7 @@ plus_groups = {}
 current_group = {}
 current_tag = {}
 CSV.new(File.new(tags_csv).read, headers: true).collect{ |row|
-  row.to_h.transform_values{ |v| v.strip == '' ? nil : v.strip }
+  row.to_h.transform_values{ |v| v.nil? || v.strip == '' ? nil : v.strip }
 }.collect{ |row|
   row.slice('tag', 'value', 'name:fr')
 }.select{ |row|
@@ -65,7 +65,7 @@ plus_groups.each{ |group_id, group|
 }
 
 csv = CSV.new(File.new(input_csv).read, headers: true).collect{ |row|
-  row.to_h.transform_values{ |v| v.strip == '' ? nil : v.strip }
+  row.to_h.transform_values{ |v| v.nil? || v.strip == '' ? nil : v.strip }
 }.collect{ |row|
   row.slice(*(['superclass:name:fr', 'superclass', 'class:name:fr', 'class', 'zoom', 'style', 'priority'].map{ |k| "#{theme}_#{k}" } + ['name_over_value', 'key', 'value', 'extra_tags', 'name:fr']))
 }.select{ |row|
