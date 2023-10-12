@@ -42,9 +42,11 @@ osm_tags = ontology['superclass'].values.collect{ |superclass|
 }.flatten.collect{ |t|
   t.split(/(=|~=|=~|!=|!~|~)/, 2).collect(&:unquote)
 }.group_by(&:first).transform_values{ |v|
-  v.collect{ |vv| vv[2] }.flatten.sort
+  v.collect{ |vv| vv[2] }.flatten.sort.uniq
 }.select{ |k, v|
   v != []
+}.transform_values{ |v|
+  v.include?(nil) ? ['__any__'] : v
 }.to_h
 
 osm_tags['leisure'] = ['__any__']
@@ -180,6 +182,12 @@ ontology['superclass'].collect{ |k_super, superclass|
         values_java = "\"#{v}\""
         tags_sql << "tags?'#{k}' AND tags->'#{k}' = #{values_sql}"
         tags_java << "matchAny(\"#{k}\", #{values_java})"
+      elsif o == '~'
+        # Treat regex as list
+        values_sql = v.split('|').map{ |t| "'#{t}'" }
+        values_java = v.split('|').map{ |t| "\"#{t}\"" }
+        tags_sql << "(NOT tags?'#{k}' OR tags->'#{k}' IN (#{values_sql.join(', ')}))"
+        tags_java << "matchAny(\"#{k}\", #{values_java.join(', ')})"
       elsif o == '!~'
         # Treat regex as list
         values_sql = v.split('|').map{ |t| "'#{t}'" }
@@ -187,7 +195,7 @@ ontology['superclass'].collect{ |k_super, superclass|
         tags_sql << "(NOT tags?'#{k}' OR tags->'#{k}' NOT IN (#{values_sql.join(', ')}))"
         tags_java << "not(matchAny(\"#{k}\", #{values_java.join(', ')}))"
       else
-        Raise 'Not implemented'
+        raise "Not implemented: #{k}#{o}#{v}"
       end
     end
   }
