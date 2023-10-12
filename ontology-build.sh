@@ -6,9 +6,9 @@ set -e
 source .env
 
 # Tourism
-curl -L "${DOC_TOURISM}/gviz/tq?tqx=out:csv&sheet=superclass&headers=0" > ontology-tourism-superclass.csv
-curl -L "${DOC_TOURISM}/gviz/tq?tqx=out:csv&sheet=POI&headers=0" > ontology-tourism.csv
-curl -L "${DOC_TOURISM}/gviz/tq?tqx=out:csv&sheet=Sous-Attributs&headers=0" > ontology-tourism-extra_tags.csv
+curl -L "${DOC_TOURISM}/export?format=csv&gid=2097204395" > ontology-tourism-superclass.csv
+curl -L "${DOC_TOURISM}/export?format=csv&gid=2004915696" > ontology-tourism.csv
+curl -L "${DOC_TOURISM}/export?format=csv&gid=1650347976" > ontology-tourism-extra_tags.csv
 
 ruby ontology-build.rb tourism 'Ontology Tourism' \
     ontology-tourism-superclass.csv \
@@ -17,9 +17,9 @@ ruby ontology-build.rb tourism 'Ontology Tourism' \
     ontology-tourism.json
 
 # City
-curl -L "${DOC_CITY}/gviz/tq?tqx=out:csv&sheet=superclass&headers=0" > ontology-city-superclass.csv
-curl -L "${DOC_CITY}/gviz/tq?tqx=out:csv&sheet=POI&headers=0" > ontology-city.csv
-curl -L "${DOC_CITY}/gviz/tq?tqx=out:csv&sheet=Sous-Attributs&headers=0" > ontology-city-extra_tags.csv
+curl -L "${DOC_CITY}/export?format=csv&gid=2097204395" > ontology-city-superclass.csv
+curl -L "${DOC_CITY}/export?format=csv&gid=2004915696" > ontology-city.csv
+curl -L "${DOC_CITY}/export?format=csv&gid=1650347976" > ontology-city-extra_tags.csv
 
 ruby ontology-build.rb city 'Ontology City' \
     ontology-city-superclass.csv \
