@@ -12,6 +12,7 @@ wget -P pbf \
     http://download.geofabrik.de/europe/france-latest.osm.pbf \
     http://download.geofabrik.de/africa/morocco-latest.osm.pbf \
     http://download.geofabrik.de/africa/madagascar-latest.osm.pbf \
+    http://download.geofabrik.de/north-america/canada/quebec-latest.osm.pbf \
     http://download.openstreetmap.fr/extracts/north-america/saint_pierre_et_miquelon-latest.osm.pbf \
     http://download.openstreetmap.fr/extracts/central-america/martinique-latest.osm.pbf \
     http://download.openstreetmap.fr/extracts/central-america/guadeloupe-latest.osm.pbf \
@@ -49,6 +50,9 @@ mv morocco-latest_.osm.pbf morocco-latest.osm.pbf
 
 osmium cat -O -o madagascar-latest_.osm.pbf --output-header=osmosis_replication_base_url=http://download.geofabrik.de/africa/madagascar-updates/ madagascar-latest.osm.pbf
 mv madagascar-latest_.osm.pbf madagascar-latest.osm.pbf
+
+osmium cat -O -o quebec-latest_.osm.pbf --output-header=osmosis_replication_base_url=http://download.geofabrik.de/north-america/canada/quebec-updates/ quebec-latest.osm.pbf
+mv quebec-latest_.osm.pbf quebec-latest.osm.pbf
 
 cd ..
 

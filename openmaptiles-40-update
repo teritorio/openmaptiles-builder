@@ -13,6 +13,7 @@ docker-compose run --rm build bash -e -c "
     /usr/lib/python3-pyosmium/pyosmium-up-to-date -v canary-islands-latest.osm.pbf
     /usr/lib/python3-pyosmium/pyosmium-up-to-date -v morocco-latest.osm.pbf
     /usr/lib/python3-pyosmium/pyosmium-up-to-date -v madagascar-latest.osm.pbf
+    /usr/lib/python3-pyosmium/pyosmium-up-to-date -v quebec-latest.osm.pbf
 "
 
 
@@ -88,6 +89,7 @@ generate "reunion" 7 14 && \
 generate "polynesie" 7 14 && \
 generate "guyane" 7 14 && \
 generate "madagascar" 7 14 && \
+generate "quebec" 7 14 && \
 generate "merge" 7 14 && \
 cd ..
 
@@ -108,6 +110,7 @@ docker-compose run --rm build bash -e -c "
         openmaptiles-v3-polynesie-z7-z14.mbtiles \
         openmaptiles-v3-guyane-z7-z14.mbtiles \
         openmaptiles-v3-madagascar-z7-z14.mbtiles
+        openmaptiles-v3-quebec-z7-z14.mbtiles
 "
 
 cp ontology-tourism.json ./mbtiles/teritorio-tourism-ontology-dev.json
