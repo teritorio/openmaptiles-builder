@@ -182,6 +182,11 @@ ontology['superclass'].collect{ |k_super, superclass|
         values_java = "\"#{v}\""
         tags_sql << "tags?'#{k}' AND tags->'#{k}' = #{values_sql}"
         tags_java << "matchAny(\"#{k}\", #{values_java})"
+      elsif o == '!='
+        values_sql = "'#{v}'"
+        values_java = "\"#{v}\""
+        tags_sql << "(NOT tags?'#{k}' OR tags->'#{k}' = #{values_sql})"
+        tags_java << "not(matchAny(\"#{k}\", #{values_java}))"
       elsif o == '~'
         # Treat regex as list
         values_sql = v.split('|').map{ |t| "'#{t}'" }
