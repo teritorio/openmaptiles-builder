@@ -11,21 +11,27 @@ input_csv = ARGV[3]
 tags_csv = ARGV[4]
 ontology_json = ARGV[5]
 
-superclasses = CSV.new(File.new(superclass_csv).read, headers: true).collect{ |row|
+superclasses = {}
+current_superclasses = nil
+CSV.new(File.new(superclass_csv).read, headers: true).collect{ |row|
   row.to_h.transform_values{ |v| v.nil? || v.strip == '' ? nil : v.strip }
 }.collect{ |row|
-  row.slice(*(%w[superclass color_icon color_text class].map{ |k| "#{theme}_#{k}" }))
-}.select{ |row|
-  row["#{theme}_color_icon"]
-}.collect{ |row|
-  [
-    row["#{theme}_superclass"],
-    {
+  row.slice(*(%w[superclass color_icon color_text class].map{ |k| "#{theme}_#{k}" } + %w[attributes_superclass attributes_class]))
+}.each{ |row|
+  if row["#{theme}_color_icon"]
+    current_superclasses = row["#{theme}_superclass"]
+    superclasses[current_superclasses] = {
       color_fill: row["#{theme}_color_icon"].downcase,
       color_line: row["#{theme}_color_text"].downcase,
+      attributes: row['attributes_superclass'].split,
+      class: {},
     }
-  ]
-}.to_h
+  elsif row["#{theme}_class"]
+    superclasses[current_superclasses][:class][row["#{theme}_class"]] = {
+      attributes: row['attributes_class']&.split,
+    }
+  end
+}
 
 
 plus_groups = {}
@@ -67,7 +73,7 @@ plus_groups.each{ |group_id, group|
 csv = CSV.new(File.new(input_csv).read, headers: true).collect{ |row|
   row.to_h.transform_values{ |v| v.nil? || v.strip == '' ? nil : v.strip }
 }.collect{ |row|
-  row.slice(*(['superclass:name:fr', 'superclass', 'class:name:fr', 'class', 'zoom', 'style', 'priority'].map{ |k| "#{theme}_#{k}" } + ['name_over_value', 'key', 'value', 'extra_tags', 'name:fr']))
+  row.slice(*(['superclass:name:fr', 'superclass', 'class:name:fr', 'class', 'zoom', 'style', 'priority'].map{ |k| "#{theme}_#{k}" } + ['name_over_value', 'key', 'value', 'extra_tags', 'name:fr', 'attributes']))
 }.select{ |row|
   row["#{theme}_superclass"]
 }.map{ |row|
@@ -75,6 +81,11 @@ csv = CSV.new(File.new(input_csv).read, headers: true).collect{ |row|
     if row['extra_tags']
       row['extra_tags'] = row['extra_tags'].split(',').map(&:strip)
     end
+    row['attributes'] = (
+      (superclasses.dig(row["#{theme}_superclass"], :attributes) || []) +
+      (superclasses.dig(row["#{theme}_superclass"], :class, row["#{theme}_class"], :attributes) || []) +
+      (row['attributes']&.split || [])
+    ).collect{ |a| a[1..-1] }
     row
   rescue StandardError
     puts 'ERROR extra_tags'
@@ -111,7 +122,7 @@ end
 hierarchy = csv.group_by{ |row| row["#{theme}_superclass"] }.collect{ |superclass, c|
   c0 = c[0]
   c = c.collect{ |r|
-    r.slice(*(['class:name:fr', 'class', 'zoom', 'style', 'priority'].map{ |k| "#{theme}_#{k}" } + ['name_over_value', 'key', 'value', 'extra_tags', 'name:fr']))
+    r.slice(*(['class:name:fr', 'class', 'zoom', 'style', 'priority'].map{ |k| "#{theme}_#{k}" } + ['name_over_value', 'key', 'value', 'extra_tags', 'name:fr', 'attributes']))
   }.group_by{ |r| r["#{theme}_class"] }.collect{ |classs, sc|
     sc0 = sc[0]
     sc = sc.collect{ |rr|
@@ -121,7 +132,8 @@ hierarchy = csv.group_by{ |row| row["#{theme}_superclass"] }.collect{ |superclas
         zoom: rr["#{theme}_zoom"].to_i,
         style: rr["#{theme}_style"],
         priority: rr["#{theme}_priority"].to_i,
-        osm_tags: (["\"#{rr['key']}\"=\"#{rr['value']}\""] + (rr['extra_tags'] || [])).collect{ |t| "[#{t}]" }.join
+        osm_tags: (["\"#{rr['key']}\"=\"#{rr['value']}\""] + (rr['extra_tags'] || [])).collect{ |t| "[#{t}]" }.join,
+        osm_tags_extra: rr['attributes'],
       }]
     }.to_h
     if sc
