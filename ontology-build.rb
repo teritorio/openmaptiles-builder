@@ -73,25 +73,16 @@ plus_groups.each{ |group_id, group|
 csv = CSV.new(File.new(input_csv).read, headers: true).collect{ |row|
   row.to_h.transform_values{ |v| v.nil? || v.strip == '' ? nil : v.strip }
 }.collect{ |row|
-  row.slice(*(['superclass:name:fr', 'superclass', 'class:name:fr', 'class', 'zoom', 'style', 'priority'].map{ |k| "#{theme}_#{k}" } + ['name_over_value', 'key', 'value', 'extra_tags', 'name:fr', 'attributes']))
+  row.slice(*(['superclass:name:fr', 'superclass', 'class:name:fr', 'class', 'zoom', 'style', 'priority'].map{ |k| "#{theme}_#{k}" } + ['name_over_value', 'key', 'value', 'name:fr', 'attributes', 'overpass']))
 }.select{ |row|
   row["#{theme}_superclass"]
 }.map{ |row|
-  begin
-    if row['extra_tags']
-      row['extra_tags'] = row['extra_tags'].split(',').map(&:strip)
-    end
-    row['attributes'] = (
-      (superclasses.dig(row["#{theme}_superclass"], :attributes) || []) +
-      (superclasses.dig(row["#{theme}_superclass"], :class, row["#{theme}_class"], :attributes) || []) +
-      (row['attributes']&.split || [])
-    ).collect{ |a| a[1..-1] }
-    row
-  rescue StandardError
-    puts 'ERROR extra_tags'
-    puts row['extra_tags'].inspect
-    exit 1
-  end
+  row['attributes'] = (
+    (superclasses.dig(row["#{theme}_superclass"], :attributes) || []) +
+    (superclasses.dig(row["#{theme}_superclass"], :class, row["#{theme}_class"], :attributes) || []) +
+    (row['attributes']&.split || [])
+  ).collect{ |a| a[1..-1] }
+  row
 }
 
 
@@ -122,7 +113,7 @@ end
 hierarchy = csv.group_by{ |row| row["#{theme}_superclass"] }.collect{ |superclass, c|
   c0 = c[0]
   c = c.collect{ |r|
-    r.slice(*(['class:name:fr', 'class', 'zoom', 'style', 'priority'].map{ |k| "#{theme}_#{k}" } + ['name_over_value', 'key', 'value', 'extra_tags', 'name:fr', 'attributes']))
+    r.slice(*(['class:name:fr', 'class', 'zoom', 'style', 'priority'].map{ |k| "#{theme}_#{k}" } + ['name_over_value', 'value', 'name:fr', 'attributes', 'overpass']))
   }.group_by{ |r| r["#{theme}_class"] }.collect{ |classs, sc|
     sc0 = sc[0]
     sc = sc.collect{ |rr|
@@ -132,7 +123,7 @@ hierarchy = csv.group_by{ |row| row["#{theme}_superclass"] }.collect{ |superclas
         zoom: rr["#{theme}_zoom"].to_i,
         style: rr["#{theme}_style"],
         priority: rr["#{theme}_priority"].to_i,
-        osm_tags: (["\"#{rr['key']}\"=\"#{rr['value']}\""] + (rr['extra_tags'] || [])).collect{ |t| "[#{t}]" }.join,
+        osm_tags: rr['overpass'].split(';'),
         osm_tags_extra: rr['attributes'],
       }]
     }.to_h

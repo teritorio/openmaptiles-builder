@@ -168,44 +168,52 @@ ontology['superclass'].collect{ |k_super, superclass|
 
   zoom ||= 18
 
-  tags_sql = []
-  tags_java = []
-  osm_tags[1..-2].split('][').collect{ |t|
-    t.split(/(=|~=|=~|!=|!~|~)/, 2).collect(&:unquote)
-  }.collect{ |k, o, v|
-    if o.nil?
-      tags_sql << "(tags?'#{k}' AND tags->'#{k}' != 'no')"
-      tags_java << "and(matchField(\"#{k}\"), not(matchAny(\"#{k}\", \"no\")))"
-    else
-      if o == '='
-        values_sql = "'#{v}'"
-        values_java = "\"#{v}\""
-        tags_sql << "tags?'#{k}' AND tags->'#{k}' = #{values_sql}"
-        tags_java << "matchAny(\"#{k}\", #{values_java})"
-      elsif o == '!='
-        values_sql = "'#{v}'"
-        values_java = "\"#{v}\""
-        tags_sql << "(NOT tags?'#{k}' OR tags->'#{k}' = #{values_sql})"
-        tags_java << "not(matchAny(\"#{k}\", #{values_java}))"
-      elsif o == '~'
-        # Treat regex as list
-        values_sql = v.split('|').map{ |t| "'#{t}'" }
-        values_java = v.split('|').map{ |t| "\"#{t}\"" }
-        tags_sql << "(NOT tags?'#{k}' OR tags->'#{k}' IN (#{values_sql.join(', ')}))"
-        tags_java << "matchAny(\"#{k}\", #{values_java.join(', ')})"
-      elsif o == '!~'
-        # Treat regex as list
-        values_sql = v.split('|').map{ |t| "'#{t}'" }
-        values_java = v.split('|').map{ |t| "\"#{t}\"" }
-        tags_sql << "(NOT tags?'#{k}' OR tags->'#{k}' NOT IN (#{values_sql.join(', ')}))"
-        tags_java << "not(matchAny(\"#{k}\", #{values_java.join(', ')}))"
+  tags_sql_multi = []
+  tags_java_multi = []
+  osm_tags.collect{ |osm_tag|
+    tags_sql = []
+    tags_java = []
+    osm_tag[1..-2].split('][').collect{ |t|
+      t.split(/(=|~=|=~|!=|!~|~)/, 2).collect(&:unquote)
+    }.sort.collect{ |k, o, v|
+      if o.nil?
+        tags_sql << "tags?'#{k}' AND tags->'#{k}' != 'no'"
+        tags_java << "and(matchField(\"#{k}\"), not(matchAny(\"#{k}\", \"no\")))"
       else
-        raise "Not implemented: #{k}#{o}#{v}"
+        if o == '='
+          values_sql = "'#{v}'"
+          values_java = "\"#{v}\""
+          tags_sql << "tags?'#{k}' AND tags->'#{k}' = #{values_sql}"
+          tags_java << "matchAny(\"#{k}\", #{values_java})"
+        elsif o == '!='
+          values_sql = "'#{v}'"
+          values_java = "\"#{v}\""
+          tags_sql << "(NOT tags?'#{k}' OR tags->'#{k}' = #{values_sql})"
+          tags_java << "not(matchAny(\"#{k}\", #{values_java}))"
+        elsif o == '~'
+          # Treat regex as list
+          values_sql = v.split('|').map{ |t| "'#{t}'" }
+          values_java = v.split('|').map{ |t| "\"#{t}\"" }
+          tags_sql << "(NOT tags?'#{k}' OR tags->'#{k}' IN (#{values_sql.join(', ')}))"
+          tags_java << "matchAny(\"#{k}\", #{values_java.join(', ')})"
+        elsif o == '!~'
+          # Treat regex as list
+          values_sql = v.split('|').map{ |t| "'#{t}'" }
+          values_java = v.split('|').map{ |t| "\"#{t}\"" }
+          tags_sql << "(NOT tags?'#{k}' OR tags->'#{k}' NOT IN (#{values_sql.join(', ')}))"
+          tags_java << "not(matchAny(\"#{k}\", #{values_java.join(', ')}))"
+        else
+          raise "Not implemented: #{k}#{o}#{v}"
+        end
       end
-    end
+    }
+
+    tags_sql_multi << (tags_sql.size == 1 ? tags_sql[0] : tags_sql.join(' AND '))
+    tags_java_multi << (tags_java.size == 1 ? tags_java[0] : "and(#{tags_java.join(', ')})")
   }
 
-  tags_java = tags_java.size == 1 ? tags_java[0] : "and(#{tags_java.join(', ')})"
+  tags_sql_multi = (tags_sql_multi.size == 1 ? tags_sql_multi[0] : '((' + tags_sql_multi.join(') OR (') + '))')
+  tags_java_multi = (tags_java_multi.size == 1 ? tags_java_multi[0] : 'or(' + tags_java_multi.join(', ') + ')')
 
   whens << if superclass_sql == "'remarkable'" && classs_sql == "'attraction_activity'" && subclass_sql == "'attraction'"
              "(SELECT
@@ -227,15 +235,15 @@ FROM (
     CASE WHEN tags ?& ARRAY['wikipedia', 'wikidata'] THEN 5 ELSE 0 END +
     CASE WHEN tags?'name' THEN 1 ELSE 0 END +
     CASE WHEN tags ?& ARRAY['website', 'phone', 'email', 'opening_hours'] THEN 1 ELSE 0 END AS score
-  WHERE #{tags_sql.join(' AND ')}
+  WHERE #{tags_sql_multi}
 ) AS score)"
            else
-             "            SELECT #{superclass_sql}, #{classs_sql}, #{subclass_sql}, #{zoom}, #{style_sql}, #{priority} WHERE #{tags_sql.join(' AND ')}"
+             "            SELECT #{superclass_sql}, #{classs_sql}, #{subclass_sql}, #{zoom}, #{style_sql}, #{priority} WHERE #{tags_sql_multi}"
            end
 
   expressions << "MultiExpression.entry(
       new PoiClass(#{superclass_java}, #{classs_java}, #{subclass_java}, #{zoom}, #{style_java}, #{priority}),
-      #{tags_java})"
+      #{tags_java_multi})"
 }
 
 file = File.open(class_sql, 'w')
