@@ -174,7 +174,11 @@ ontology['superclass'].collect{ |k_super, superclass|
     tags_sql = []
     tags_java = []
     osm_tag[1..-2].split('][').collect{ |t|
-      t.split(/(=|~=|=~|!=|!~|~)/, 2).collect(&:unquote)
+      if t[0] == '!'
+        [t[1..].unquote, '!=', nil]
+      else
+        t.split(/(=|~=|=~|!=|!~|~)/, 2).collect(&:unquote)
+      end
     }.sort.collect{ |k, o, v|
       if o.nil?
         tags_sql << "tags?'#{k}' AND tags->'#{k}' != 'no'"
@@ -186,10 +190,15 @@ ontology['superclass'].collect{ |k_super, superclass|
           tags_sql << "tags?'#{k}' AND tags->'#{k}' = #{values_sql}"
           tags_java << "matchAny(\"#{k}\", #{values_java})"
         elsif o == '!='
-          values_sql = "'#{v}'"
-          values_java = "\"#{v}\""
-          tags_sql << "(NOT tags?'#{k}' OR tags->'#{k}' = #{values_sql})"
-          tags_java << "not(matchAny(\"#{k}\", #{values_java}))"
+          if v.nil?
+            tags_sql << "(NOT tags?'#{k}')"
+            tags_java << "not(matchField(\"#{k}\"))"
+          else
+            values_sql = "'#{v}'"
+            values_java = "\"#{v}\""
+            tags_sql << "(NOT tags?'#{k}' OR tags->'#{k}' = #{values_sql})"
+            tags_java << "not(matchAny(\"#{k}\", #{values_java}))"
+          end
         elsif o == '~'
           # Treat regex as list
           values_sql = v.split('|').map{ |t| "'#{t}'" }
