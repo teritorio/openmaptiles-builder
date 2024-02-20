@@ -16,11 +16,12 @@ current_superclasses = nil
 CSV.new(File.new(superclass_csv).read, headers: true).collect{ |row|
   row.to_h.transform_values{ |v| v.nil? || v.strip == '' ? nil : v.strip }
 }.collect{ |row|
-  row.slice(*(%w[superclass color_icon color_text class].map{ |k| "#{theme}_#{k}" } + %w[attributes_superclass attributes_class]))
+  row.slice(*(['superclass', 'color_icon', 'color_text', 'class', 'superclass:name:fr'].map{ |k| "#{theme}_#{k}" } + %w[attributes_superclass attributes_class]))
 }.each{ |row|
   if row["#{theme}_color_icon"]
     current_superclasses = row["#{theme}_superclass"]
     superclasses[current_superclasses] = {
+      label: { en: current_superclasses, fr: row["#{theme}_superclass:name:fr"] },
       color_fill: row["#{theme}_color_icon"].downcase,
       color_line: row["#{theme}_color_text"].downcase,
       attributes: row['attributes_superclass'].split,
@@ -144,7 +145,7 @@ hierarchy = csv.group_by{ |row| row["#{theme}_superclass"] }.collect{ |superclas
   pop = c.delete(nil)
   pop = pop[:subclass] if pop
   [superclass, {
-    label: { en: superclass, fr: c0["#{theme}_superclass:name:fr"] },
+    label: superclasses[superclass][:label],
     color_fill: superclasses[superclass][:color_fill],
     color_line: superclasses[superclass][:color_line],
     class: c.merge(pop || {}),
