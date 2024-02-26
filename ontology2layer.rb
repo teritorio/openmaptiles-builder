@@ -42,7 +42,7 @@ osm_tags = ontology['superclass'].values.collect{ |superclass|
 }.flatten.collect{ |t|
   t.split(/(=|~=|=~|!=|!~|~)/, 2).collect(&:unquote)
 }.group_by(&:first).transform_values{ |v|
-  v.collect{ |vv| vv[2] }.flatten.sort.uniq
+  v.collect{ |vv| vv[2] }.flatten.uniq.sort{ |a, b| a && b ? a <=> b : a ? -1 : 1 }
 }.select{ |k, v|
   v != []
 }.transform_values{ |v|
