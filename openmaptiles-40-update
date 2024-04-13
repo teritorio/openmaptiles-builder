@@ -47,16 +47,18 @@ docker-compose run --rm build bash -e -c "
         morocco-latest.osm.pbf \
 "
 
+curl https://raw.githubusercontent.com/teritorio/ontology-builder/gh-pages/teritorio-tourism-ontology-1.0.json > teritorio-tourism-ontology-1.0.json
+curl https://raw.githubusercontent.com/teritorio/ontology-builder/gh-pages/teritorio-city-ontology-1.0.json > teritorio-city-ontology-1.0.json
+
 docker-compose run --rm build bash -e -c "
-    ./ontology-build.sh && \\
     ruby ontology2layer.rb tourism \\
-        ontology-tourism.json \\
+        teritorio-tourism-ontology-1.0.json \\
         openmaptiles/layers/poi_tourism/poi_tourism.yaml \\
         openmaptiles/layers/poi_tourism/mapping.yaml \\
         openmaptiles/layers/poi_tourism/class.sql \\
         planetiler-openmaptiles/src/main/java/org/openmaptiles/layers/PoiTourismClass.java && \\
     ruby ontology2layer.rb city \\
-        ontology-city.json \\
+        teritorio-city-ontology-1.0.json \\
         openmaptiles/layers/poi_city/poi_city.yaml \\
         openmaptiles/layers/poi_city/mapping.yaml \\
         openmaptiles/layers/poi_city/class.sql \\
@@ -113,5 +115,5 @@ docker-compose run --rm build bash -e -c "
         openmaptiles-v3-quebec-z7-z14.mbtiles
 "
 
-cp ontology-tourism.json ./mbtiles/teritorio-tourism-ontology-dev.json
-cp ontology-city.json ./mbtiles/teritorio-city-ontology-dev.json
+cp teritorio-tourism-ontology-1.0.json ./mbtiles/teritorio-tourism-ontology-dev.json
+cp teritorio-city-ontology-1.0.json ./mbtiles/teritorio-city-ontology-dev.json
