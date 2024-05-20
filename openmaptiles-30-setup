@@ -10,6 +10,7 @@ wget -P pbf \
     http://download.geofabrik.de/europe/luxembourg-latest.osm.pbf \
     http://download.geofabrik.de/europe/belgium-latest.osm.pbf \
     http://download.geofabrik.de/europe/france-latest.osm.pbf \
+    http://download.geofabrik.de/europe/switzerland-latest.osm.pbf \
     http://download.geofabrik.de/africa/morocco-latest.osm.pbf \
     http://download.geofabrik.de/africa/madagascar-latest.osm.pbf \
     http://download.geofabrik.de/north-america/canada/quebec-latest.osm.pbf \

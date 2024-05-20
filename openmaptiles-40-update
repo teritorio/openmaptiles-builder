@@ -14,6 +14,7 @@ docker-compose run --rm build bash -e -c "
     /usr/lib/python3-pyosmium/pyosmium-up-to-date -v morocco-latest.osm.pbf
     /usr/lib/python3-pyosmium/pyosmium-up-to-date -v madagascar-latest.osm.pbf
     /usr/lib/python3-pyosmium/pyosmium-up-to-date -v quebec-latest.osm.pbf
+    /usr/lib/python3-pyosmium/pyosmium-up-to-date -v switzerland-latest.osm.pbf
 "
 
 
@@ -42,6 +43,7 @@ docker-compose run --rm build bash -e -c "
         guernsey-jersey-latest.osm.pbf \
         luxembourg-latest.osm.pbf \
         belgium-latest.osm.pbf \
+        switzerland-latest.osm.pbf \
         spain-latest.osm.pbf \
         canary-islands-latest.osm.pbf \
         morocco-latest.osm.pbf \
