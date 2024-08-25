@@ -43,24 +43,20 @@ rm -f \
     pbf/planet-lake_noref-latest.osm.pbf \
     pbf/planet-park_noref-latest.osm.pbf
 
-rm -f openmaptiles/data/*.pbf
-cp pbf/planet-z0-z6.osm.pbf openmaptiles/data/
+generate() {
+    ZOOM_MIN=$1
+    ZOOM_MAX=$2
+    JAVA_TOOL_OPTIONS="-Xmx2g" java -jar target/*with-deps.jar \
+        --force \
+        --osm-path=../pbf/planet-z0-z6.osm.pbf \
+        --bounds=-180,-90,180,90 \
+        --minzoom=${ZOOM_MIN} \
+        --maxzoom=${ZOOM_MAX} \
+        --output=../mbtiles/openmaptiles-v3-z${ZOOM_MIN}-z${ZOOM_MAX}.mbtiles
+}
 
-cd openmaptiles
-
-time bash -c "\
-docker-compose down -v && \
-docker-compose run --rm openmaptiles-tools bash -c 'chmod a+w /cache/ && rm -fr build' && \
-make && \
-make import-data && \
-make import-osm area=planet-z0-z6 && \
-make import-sql && \
-make import-wikidata && \
-make analyze-db
-"
-sed -i 's/MIN_ZOOM.*/MIN_ZOOM=0/' .env && \
-sed -i 's/MAX_ZOOM.*/MAX_ZOOM=6/' .env && \
-make generate-tiles area=planet-z0-z6
-cd ..
-
-mv -f openmaptiles/data/tiles.mbtiles mbtiles/openmaptiles-v3-z0-z6.mbtiles
+cd planetiler-openmaptiles && \
+git checkout src/main/java/org/openmaptiles/generated/ && \
+./scripts/regenerate-openmaptiles.sh openmaptiles file://`pwd`/../ && \
+./mvnw clean package -Dmaven.test.skip --no-snapshot-updates && \
+generate 0 6
