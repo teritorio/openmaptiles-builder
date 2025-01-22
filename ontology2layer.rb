@@ -29,14 +29,14 @@ class String
   end
 end
 
-osm_tags_extra = ontology['osm_tags_extra'].values.collect(&:keys).flatten
+properties_extra = ontology['properties_extra'].values.collect(&:keys).flatten
 
-osm_tags = ontology['superclass'].values.collect{ |superclass|
-  (superclass['class'] || {}).values.collect{ |classs|
-    (classs['subclass'] || {}).values.collect{ |subclass|
-      subclass['osm_tags']
-    } + [classs['osm_tags'] || []]
-  } + [[superclass['osm_tags'] || []]]
+osm_selector = ontology['group'].values.collect{ |superclass|
+  (superclass['group'] || {}).values.collect{ |classs|
+    (classs['group'] || {}).values.collect{ |subclass|
+      subclass['osm_selector']
+    } + [classs['osm_selector'] || []]
+  } + [[superclass['osm_selector'] || []]]
 }.flatten.compact.collect{ |t|
   t[1..-2].split('][')
 }.flatten.collect{ |t|
@@ -49,24 +49,24 @@ osm_tags = ontology['superclass'].values.collect{ |superclass|
   v.include?(nil) ? ['__any__'] : v
 }.to_h
 
-osm_tags['leisure'] = ['__any__']
-osm_tags['landuse'] = ['__any__']
+osm_selector['leisure'] = ['__any__']
+osm_selector['landuse'] = ['__any__']
 
-y = { def_poi: osm_tags.to_h }
+y = { def_poi: osm_selector.to_h }
 yaml_str = YAML.dump(y)
 
-include_tags = (osm_tags.keys + osm_tags_extra).sort.uniq.join("', '")
+include_tags = (osm_selector.keys + properties_extra).sort.uniq.join("', '")
 include_tags = "'#{include_tags}'" if include_tags.size > 0
 
 poi_yaml = File.read(layer_yaml)
 poi_yaml = YAML.load(poi_yaml)
 
-query = "(SELECT osm_id, geometry, name, name_en, name_de, {name_languages}, superclass, class, subclass, zoom, priority, style, agg_stop, layer, level, indoor, rank, {extra_attributes} FROM layer_poi_#{theme}(!bbox!, z(!scale_denominator!), !pixel_width!)) AS t"
-query = query.gsub('{extra_attributes}', osm_tags_extra.map{ |t| "tags->'#{t}' AS \"#{t}\"" }.join(', '))
+query = "(SELECT osm_selectorid, geometry, name, name_en, name_de, {name_languages}, superclass, class, subclass, zoom, priority, style, agg_stop, layer, level, indoor, rank, {extra_attributes} FROM layer_poi_#{theme}(!bbox!, z(!scale_denominator!), !pixel_width!)) AS t"
+query = query.gsub('{extra_attributes}', properties_extra.map{ |t| "tags->'#{t}' AS \"#{t}\"" }.join(', '))
 poi_yaml['layer']['datasource']['query'] = query
 
 keep_fields = %w[geometry name name_en name_de superclass class subclass zoom priority style agg_stop layer level indoor rank]
-poi_yaml['layer']['fields'] = poi_yaml['layer']['fields'].slice(*keep_fields).merge(osm_tags_extra.map{ |t| [t, ''] }.to_h)
+poi_yaml['layer']['fields'] = poi_yaml['layer']['fields'].slice(*keep_fields).merge(properties_extra.map{ |t| [t, ''] }.to_h)
 File.write(layer_yaml, YAML.dump(poi_yaml))
 
 file = File.open(mapping_yaml, 'w')
@@ -149,13 +149,13 @@ tables:
 
 whens = []
 expressions = []
-ontology['superclass'].collect{ |k_super, superclass|
-  (superclass['class'] || {}).collect{ |k, classs|
-    (classs['subclass'] || {}).collect{ |k_sub, subclass|
-      [k_super, k, k_sub, subclass['zoom'], subclass['style'], subclass['priority'], subclass['osm_tags']]
-    } + (classs['style'] ? [[k_super, k, nil, classs['zoom'], classs['style'], classs['priority'], classs['osm_tags']]] : [])
+ontology['group'].collect{ |k_super, superclass|
+  (superclass['group'] || {}).collect{ |k, classs|
+    (classs['group'] || {}).collect{ |k_sub, subclass|
+      [k_super, k, k_sub, subclass['zoom'], subclass['style'], subclass['priority'], subclass['osm_selector']]
+    } + (classs['style'] ? [[k_super, k, nil, classs['zoom'], classs['style'], classs['priority'], classs['osm_selector']]] : [])
   }
-}.flatten(2).sort.collect{ |superclass, classs, subclass, zoom, style, priority, osm_tags|
+}.flatten(2).sort.collect{ |superclass, classs, subclass, zoom, style, priority, osm_selector|
   superclass_sql = "'#{superclass}'"
   classs_sql = "'#{classs}'"
   subclass_sql = subclass ? "'#{subclass}'" : 'NULL'
@@ -170,10 +170,10 @@ ontology['superclass'].collect{ |k_super, superclass|
 
   tags_sql_multi = []
   tags_java_multi = []
-  osm_tags.collect{ |osm_tag|
+  osm_selector.collect{ |osm_selectortag|
     tags_sql = []
     tags_java = []
-    osm_tag[1..-2].split('][').collect{ |t|
+    osm_selectortag[1..-2].split('][').collect{ |t|
       if t[0] == '!'
         [t[1..].unquote, '!=', nil]
       else
